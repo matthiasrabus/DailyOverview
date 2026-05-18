@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background circle -->
+  <circle cx="16" cy="16" r="16" fill="#0d6efd"/>
+  <!-- Bar chart bars (white) -->
+  <rect x="5"  y="18" width="5" height="9"  rx="1" fill="white"/>
+  <rect x="13" y="11" width="5" height="16" rx="1" fill="white"/>
+  <rect x="21" y="5"  width="5" height="22" rx="1" fill="white"/>
+</svg>

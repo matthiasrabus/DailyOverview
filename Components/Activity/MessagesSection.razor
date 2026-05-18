@@ -1,0 +1,53 @@
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-semibold">💬 Teams Messages</h5>
+        @if (IsLoading)
+        {
+            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+        }
+        else
+        {
+            <span class="badge bg-primary rounded-pill">@(Items?.Count ?? 0)</span>
+        }
+    </div>
+
+    @if (IsLoading)
+    {
+        <SectionSpinner Label="Fetching Teams messages…" />
+    }
+    else if (Error != null)
+    {
+        <SectionError Message="@Error" />
+    }
+    else if (Items?.Count == 0)
+    {
+        <div class="card-body text-muted fst-italic">(none)</div>
+    }
+    else if (Items != null)
+    {
+        <div class="list-group list-group-flush">
+            @foreach (var group in Items.OrderBy(m => m.Timestamp).GroupBy(m => m.Source))
+            {
+                <div class="list-group-item bg-light py-2 px-3 fw-semibold text-secondary small">
+                    📁 @group.Key
+                </div>
+                @foreach (var msg in group)
+                {
+                    <div class="list-group-item list-group-item-action py-2 px-3 @(msg.IsSentByMe ? "list-group-item-success" : "")">
+                        <div class="d-flex align-items-start gap-3">
+                            <span class="text-muted small text-nowrap mt-1">@msg.Timestamp.ToString("HH:mm")</span>
+                            <span class="fw-semibold text-nowrap sender-col small mt-1">@msg.SenderName</span>
+                            <span class="text-body small">@msg.BodyPreview</span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<TeamMessage>? Items     { get; set; }
+    [Parameter] public bool               IsLoading { get; set; }
+    [Parameter] public string?            Error     { get; set; }
+}

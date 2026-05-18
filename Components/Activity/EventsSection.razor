@@ -1,0 +1,65 @@
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-semibold">📅 Calendar</h5>
+        @if (IsLoading)
+        {
+            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+        }
+        else
+        {
+            <span class="badge bg-primary rounded-pill">@(Items?.Count ?? 0)</span>
+        }
+    </div>
+
+    @if (IsLoading)
+    {
+        <SectionSpinner Label="Fetching calendar events…" />
+    }
+    else if (Error != null)
+    {
+        <SectionError Message="@Error" />
+    }
+    else if (Items?.Count == 0)
+    {
+        <div class="card-body text-muted fst-italic">(none)</div>
+    }
+    else if (Items != null)
+    {
+        <div class="list-group list-group-flush">
+            @foreach (var ev in Items.OrderBy(e => e.Start))
+            {
+                <div class="list-group-item list-group-item-action py-2 px-3">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <span class="text-muted small text-nowrap">
+                            @ev.Start.ToString("HH:mm") – @ev.End.ToString("HH:mm")
+                        </span>
+                        <span class="@(ev.IsOrganizer ? "fw-semibold text-success" : "")">@ev.Subject</span>
+                        <div class="d-flex gap-1 ms-auto flex-shrink-0">
+                            @if (ev.IsOnline)
+                            {
+                                <span class="badge rounded-pill bg-info text-dark">online</span>
+                            }
+                            @if (ev.IsOrganizer)
+                            {
+                                <span class="badge rounded-pill bg-success">organizer</span>
+                            }
+                            @if (ev.Attendees.Count > 0)
+                            {
+                                <span class="badge rounded-pill bg-secondary">@ev.Attendees.Count attendees</span>
+                            }
+                            <span class="badge rounded-pill bg-light text-muted border">
+                                @((int)ev.Duration.TotalMinutes) min
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<CalendarEvent>? Items     { get; set; }
+    [Parameter] public bool                 IsLoading { get; set; }
+    [Parameter] public string?              Error     { get; set; }
+}

@@ -1,0 +1,43 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+*.sln.iml
+
+# User-specific files
+*.rsuser
+
+# NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+artifacts/
+packages/
+
+# App settings (may contain secrets)
+appsettings*.json
+
+# ASP.NET Core
+**/launchSettings.json
+
+# Environment-specific app settings (keep appsettings.json, ignore overrides with secrets)
+appsettings.Development.json
+appsettings.Local.json
+appsettings.Production.json
+
+# Claude Code
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db

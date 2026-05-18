@@ -1,0 +1,44 @@
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+
+html, body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: #f4f6f9;
+}
+
+/* ── Sender column (Teams messages) ─────────────────────────────────────── */
+
+.sender-col {
+    min-width: 150px;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Counterpart column (Email) ─────────────────────────────────────────── */
+
+.counterpart-col {
+    min-width: 200px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ── Card header ────────────────────────────────────────────────────────── */
+
+.card-header h5 {
+    font-size: 1rem;
+}
+
+/* ── Smooth hover on list items ─────────────────────────────────────────── */
+
+.list-group-item-action:hover {
+    background-color: #f0f4ff !important;
+}
+
+/* ── Loading spinner colour ─────────────────────────────────────────────── */
+
+.spinner-border {
+    color: white;
+}

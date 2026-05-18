@@ -1,0 +1,194 @@
+@page "/"
+@rendermode InteractiveServer
+@inject DailyActivityService ActivityService
+
+<PageTitle>Daily Activity – @_selectedDate.ToString("yyyy-MM-dd")</PageTitle>
+
+<!-- ─── Toolbar ──────────────────────────────────────────────────────────── -->
+<div class="d-flex flex-wrap align-items-center gap-3 mb-4">
+    <label class="fw-semibold mb-0">📅 Date:</label>
+    <input type="date"
+           class="form-control w-auto"
+           @bind="_selectedDate"
+           @bind:format="yyyy-MM-dd" />
+    <button class="btn btn-primary px-4" @onclick="FetchData" disabled="@_isFetching">
+        @if (_isFetching)
+        {
+            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            <span>Fetching…</span>
+        }
+        else
+        {
+            <span>🔍 Fetch Activity</span>
+        }
+    </button>
+    @if (_hasFetched && AllDone)
+    {
+        <button class="btn btn-outline-secondary" @onclick="ExportCsv" title="Export to CSV on Desktop">
+            💾 Export CSV
+        </button>
+        @if (_exportMessage != null)
+        {
+            <span class="text-success small">@_exportMessage</span>
+        }
+    }
+</div>
+
+<!-- ─── Auth error ────────────────────────────────────────────────────────── -->
+@if (_authError != null)
+{
+    <div class="alert alert-danger alert-dismissible" role="alert">
+        <strong>Authentication error:</strong> @_authError
+        <button type="button" class="btn-close" @onclick="() => _authError = null"></button>
+    </div>
+}
+
+<!-- ─── Activity (visible as soon as fetching starts) ───────────────────── -->
+@if (_hasFetched)
+{
+    <SummaryCards Messages="@_messages" LoadingMessages="@_loadingMessages"
+                  Events="@_events"     LoadingEvents="@_loadingEvents"
+                  Emails="@_emails"     LoadingEmails="@_loadingEmails"
+                  Commits="@_commits"   LoadingCommits="@_loadingCommits" />
+
+    <MessagesSection Items="@_messages" IsLoading="@_loadingMessages" Error="@_messagesError" />
+    <EventsSection   Items="@_events"   IsLoading="@_loadingEvents"   Error="@_eventsError" />
+    <EmailSection    Items="@_emails"   IsLoading="@_loadingEmails"   Error="@_emailsError" />
+    <CommitsSection  Items="@_commits"  IsLoading="@_loadingCommits"  Error="@_commitsError" />
+}
+else
+{
+    <div class="text-center text-muted py-5">
+        <div class="fs-1 mb-3">📊</div>
+        <p class="fs-5">Select a date and click <strong>Fetch Activity</strong> to load your daily summary.</p>
+    </div>
+}
+
+@code {
+    private DateTime _selectedDate = DateTime.Today;
+
+    // ─── Per-section state ────────────────────────────────────────────────────
+
+    private List<TeamMessage>?   _messages;
+    private List<CalendarEvent>? _events;
+    private List<MailMessage>?   _emails;
+    private List<DevOpsCommit>?  _commits;
+
+    private bool _loadingMessages;
+    private bool _loadingEvents;
+    private bool _loadingEmails;
+    private bool _loadingCommits;
+
+    private string? _messagesError;
+    private string? _eventsError;
+    private string? _emailsError;
+    private string? _commitsError;
+
+    // ─── Page-level state ─────────────────────────────────────────────────────
+
+    private bool    _hasFetched;
+    private bool    _isFetching;
+    private string? _authError;
+    private string? _exportMessage;
+
+    private bool AllDone =>
+        !_loadingMessages && !_loadingEvents && !_loadingEmails && !_loadingCommits;
+
+    // ─── Fetch ────────────────────────────────────────────────────────────────
+
+    private async Task FetchData()
+    {
+        _isFetching      = true;
+        _hasFetched      = true;
+        _exportMessage   = null;
+        _authError       = null;
+
+        _messages = null;
+        _events   = null;
+        _emails   = null;
+        _commits  = null;
+        _messagesError = _eventsError = _emailsError = _commitsError = null;
+        _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = true;
+
+        try
+        {
+            var date = DateOnly.FromDateTime(_selectedDate);
+            var (graph, email, userId) = await ActivityService.AuthenticateAsync();
+
+            // All four fetchers run simultaneously; each pushes a UI update when done
+            await Task.WhenAll(
+                RunSection(
+                    () => ActivityService.FetchMessagesAsync(graph, userId, date),
+                    r => _messages      = r,
+                    e => _messagesError = e,
+                    () => _loadingMessages = false),
+
+                RunSection(
+                    () => ActivityService.FetchEventsAsync(graph, date),
+                    r => _events      = r,
+                    e => _eventsError = e,
+                    () => _loadingEvents = false),
+
+                RunSection(
+                    () => ActivityService.FetchEmailsAsync(graph, date),
+                    r => _emails      = r,
+                    e => _emailsError = e,
+                    () => _loadingEmails = false),
+
+                RunSection(
+                    () => ActivityService.FetchCommitsAsync(email, date),
+                    r => _commits      = r,
+                    e => _commitsError = e,
+                    () => _loadingCommits = false)
+            );
+        }
+        catch (Exception ex)
+        {
+            _authError = ex.Message;
+            _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = false;
+        }
+        finally
+        {
+            _isFetching = false;
+        }
+    }
+
+    // Runs one fetcher, updates its state, then pushes the change to the browser
+    private async Task RunSection<T>(
+        Func<Task<T>>  fetch,
+        Action<T>      setResult,
+        Action<string> setError,
+        Action         setDone)
+    {
+        try
+        {
+            setResult(await fetch());
+        }
+        catch (Exception ex)
+        {
+            setError(ex.Message);
+        }
+        finally
+        {
+            setDone();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    // ─── Export ───────────────────────────────────────────────────────────────
+
+    private void ExportCsv()
+    {
+        try
+        {
+            var date = DateOnly.FromDateTime(_selectedDate);
+            new MessageExporter().ExportAll(
+                _messages ?? [], _events ?? [], _emails ?? [], _commits ?? [], date);
+            _exportMessage = $"Saved: daily_summary_{date:yyyy-MM-dd}.csv";
+        }
+        catch (Exception ex)
+        {
+            _authError = $"Export failed: {ex.Message}";
+        }
+    }
+}
