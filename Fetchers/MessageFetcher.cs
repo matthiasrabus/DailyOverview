@@ -10,7 +10,7 @@ public class MessageFetcher
     private readonly string?            _myUserId;
 
     // Caps concurrent Graph calls when fetching channel messages in parallel
-    private readonly SemaphoreSlim _throttle = new(4, 4);
+    private readonly SemaphoreSlim _throttle = new(6, 6);
 
     public MessageFetcher(GraphServiceClient graph, string? myUserId = null)
     {
@@ -32,13 +32,11 @@ public class MessageFetcher
     }
 
     // ─── Chat messages (1:1 and group chats) ─────────────────────────────────
-    // Fetched sequentially — Graph does not support $filter on chat messages,
-    // so we must page through each chat individually. Racing many concurrent
-    // requests against the same endpoint triggers silent 429s.
+    // Graph does not support $filter by date on chat messages, so we page each
+    // chat individually. Fetches run in parallel (capped at throttle limit).
 
     private async Task<List<TeamMessage>> FetchChatMessagesAsync(DateTime start, DateTime end)
     {
-        var result = new List<TeamMessage>();
         try
         {
             var chatsPage = await _graph.Me.Chats.GetAsync(config =>
@@ -49,18 +47,16 @@ public class MessageFetcher
 
             var chats = await PaginateAsync<Chat, ChatCollectionResponse>(chatsPage);
 
-            foreach (var chat in chats)
-            {
-                var messages = await FetchMessagesFromChatAsync(
-                    chat.Id!, GetChatDisplayName(chat), start, end);
-                result.AddRange(messages);
-            }
+            var tasks   = chats.Select(chat =>
+                Throttled(() => FetchMessagesFromChatAsync(chat.Id!, GetChatDisplayName(chat), start, end)));
+            var results = await Task.WhenAll(tasks);
+            return [.. results.SelectMany(r => r)];
         }
         catch (Exception ex)
         {
             Console.WriteLine($"   ⚠️  Could not fetch chats: {ex.Message}");
+            return [];
         }
-        return result;
     }
 
     private async Task<List<TeamMessage>> FetchMessagesFromChatAsync(
@@ -104,20 +100,18 @@ public class MessageFetcher
             var teamsPage = await _graph.Me.JoinedTeams.GetAsync();
             var teams     = await PaginateAsync<Team, TeamCollectionResponse>(teamsPage);
 
-            // Build the full list of (teamId, channelId, sourceName) tuples first,
-            // then fan out the message fetches in parallel with a throttle
-            var channelRefs = new List<(string TeamId, string ChannelId, string Source)>();
+            // Fan out channel enumeration across teams, then message fetches across channels
+            var channelRefLists = await Task.WhenAll(teams.Select(team =>
+                Throttled(async () =>
+                {
+                    var channelsPage = await _graph.Teams[team.Id].Channels.GetAsync();
+                    var channels = await PaginateAsync<Channel, ChannelCollectionResponse>(channelsPage);
+                    return channels.Select(ch =>
+                        (TeamId: team.Id!, ChannelId: ch.Id!, Source: $"{team.DisplayName} › #{ch.DisplayName}"));
+                })));
 
-            foreach (var team in teams)
-            {
-                var channelsPage = await _graph.Teams[team.Id].Channels.GetAsync();
-                var channels     = await PaginateAsync<Channel, ChannelCollectionResponse>(channelsPage);
+            var channelRefs = channelRefLists.SelectMany(r => r);
 
-                foreach (var ch in channels)
-                    channelRefs.Add((team.Id!, ch.Id!, $"{team.DisplayName} › #{ch.DisplayName}"));
-            }
-
-            // Fetch messages for all channels concurrently (server-side filter makes this safe)
             var tasks = channelRefs.Select(r =>
                 Throttled(() => FetchMessagesFromChannelAsync(r.TeamId, r.ChannelId, r.Source, start, end)));
 
