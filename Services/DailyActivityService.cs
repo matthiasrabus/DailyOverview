@@ -42,4 +42,7 @@ public class DailyActivityService
 
     public Task<List<DevOpsCommit>> FetchCommitsAsync(string userEmail, DateOnly date)
         => new DevOpsFetcher(_config, userEmail).GetCommitsForDateAsync(date);
+
+    public Task<List<TodoTask>> FetchTodoTasksAsync(GraphServiceClient graph, DateOnly date)
+        => new TodoFetcher(graph, _config.TodoListName).GetTasksForDateAsync(date);
 }

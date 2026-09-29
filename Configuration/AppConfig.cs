@@ -11,6 +11,9 @@ public class AppConfig
     public string? DevOpsOrganization { get; set; }
     public string? DevOpsPat          { get; set; }
 
+    // Microsoft To Do — optional; defaults to "Tasks" when absent
+    public string  TodoListName       { get; set; } = "Tasks";
+
     public static AppConfig Load()
     {
         // Start from environment variables
@@ -18,6 +21,7 @@ public class AppConfig
         var clientId  = Environment.GetEnvironmentVariable("TEAMS_CLIENT_ID");
         string? devOpsOrg = null;
         string? devOpsPat = null;
+        string? todoListName = Environment.GetEnvironmentVariable("TEAMS_TODO_LIST");
 
         // Overlay with appsettings.json (always read it, not just when env vars are absent)
         var settingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
@@ -30,6 +34,7 @@ public class AppConfig
             clientId  ??= settings?.ClientId;
             devOpsOrg ??= settings?.DevOpsOrganization;
             devOpsPat ??= settings?.DevOpsPat;
+            todoListName ??= settings?.TodoListName;
         }
 
         // Prompt for required AAD fields if still missing
@@ -54,6 +59,7 @@ public class AppConfig
             ClientId           = clientId,
             DevOpsOrganization = devOpsOrg,
             DevOpsPat          = devOpsPat,
+            TodoListName       = string.IsNullOrWhiteSpace(todoListName) ? "Tasks" : todoListName,
         };
     }
 
@@ -63,5 +69,6 @@ public class AppConfig
         public string? ClientId           { get; set; }
         public string? DevOpsOrganization { get; set; }
         public string? DevOpsPat          { get; set; }
+        public string? TodoListName       { get; set; }
     }
 }

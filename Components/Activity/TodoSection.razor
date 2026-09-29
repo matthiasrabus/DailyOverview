@@ -1,0 +1,62 @@
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-semibold">✅ Microsoft To Do</h5>
+        @if (IsLoading)
+        {
+            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+        }
+        else
+        {
+            <span class="badge bg-primary rounded-pill">@(Items?.Count ?? 0)</span>
+        }
+    </div>
+
+    @if (IsLoading)
+    {
+        <SectionSpinner Label="Fetching To Do tasks…" />
+    }
+    else if (Error != null)
+    {
+        <SectionError Message="@Error" />
+    }
+    else if (Items?.Count == 0)
+    {
+        <div class="card-body text-muted fst-italic">(none)</div>
+    }
+    else if (Items != null)
+    {
+        <div class="list-group list-group-flush">
+            @foreach (var task in Items.OrderBy(t => t.CreatedDateTime))
+            {
+                <div class="list-group-item list-group-item-action py-2 px-3">
+                    <div class="d-flex align-items-center gap-3 flex-wrap">
+                        <span class="@(task.IsCompleted ? "text-decoration-line-through text-muted" : "fw-semibold")">
+                            @task.Title
+                        </span>
+                        <div class="d-flex gap-1 ms-auto flex-shrink-0">
+                            @if (task.DueDateTime.HasValue)
+                            {
+                                <span class="badge rounded-pill bg-light text-muted border">
+                                    due @task.DueDateTime.Value.ToString("yyyy-MM-dd")
+                                </span>
+                            }
+                            @if (!string.IsNullOrEmpty(task.Importance) && !task.Importance.Equals("normal", StringComparison.OrdinalIgnoreCase))
+                            {
+                                <span class="badge rounded-pill bg-warning text-dark">@task.Importance</span>
+                            }
+                            <span class="badge rounded-pill @(task.IsCompleted ? "bg-success" : "bg-secondary")">
+                                @task.Status
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<TodoTask>? Items     { get; set; }
+    [Parameter] public bool            IsLoading { get; set; }
+    [Parameter] public string?         Error     { get; set; }
+}

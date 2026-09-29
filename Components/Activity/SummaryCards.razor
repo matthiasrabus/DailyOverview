@@ -88,6 +88,27 @@
         </div>
     </div>
 
+    <!-- ─── To Do ────────────────────────────────────────────────────────── -->
+    <div class="col-6 col-lg-3">
+        <div class="card border-0 shadow-sm text-center h-100">
+            <div class="card-body py-3">
+                <div class="display-6 mb-1">✅</div>
+                @if (LoadingTasks)
+                {
+                    <div class="spinner-border text-primary my-1" style="width:1.6rem;height:1.6rem;" role="status"></div>
+                }
+                else
+                {
+                    <div class="fs-2 fw-bold text-primary lh-1">@(Tasks?.Count ?? 0)</div>
+                    <div class="small mt-1">
+                        <span class="text-success">✓ @(Tasks?.Count(t => t.IsCompleted) ?? 0) done</span>
+                    </div>
+                }
+                <div class="text-muted small mt-1">To Do Tasks</div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 @code {
@@ -95,9 +116,11 @@
     [Parameter] public List<CalendarEvent>? Events         { get; set; }
     [Parameter] public List<MailMessage>?   Emails         { get; set; }
     [Parameter] public List<DevOpsCommit>?  Commits        { get; set; }
+    [Parameter] public List<TodoTask>?      Tasks          { get; set; }
 
     [Parameter] public bool LoadingMessages { get; set; }
     [Parameter] public bool LoadingEvents   { get; set; }
     [Parameter] public bool LoadingEmails   { get; set; }
     [Parameter] public bool LoadingCommits  { get; set; }
+    [Parameter] public bool LoadingTasks    { get; set; }
 }

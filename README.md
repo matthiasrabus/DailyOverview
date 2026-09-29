@@ -12,6 +12,7 @@ A **Blazor Server** web app built on **.NET 10** that fetches and displays your 
 | 📅 **Calendar** | All meetings and events for the selected day |
 | 📧 **Email** | Sent and received messages from Outlook |
 | 🔧 **DevOps Commits** | Your commits across all Azure DevOps projects and repos |
+| ✅ **Microsoft To Do** | Tasks created or completed on the selected day (read-only) |
 
 - Interactive date picker — browse any past date
 - Summary cards showing sent/received counts at a glance
@@ -49,7 +50,8 @@ TeamsMessageFetcher/
 │   ├── TeamMessage.cs              # Teams chat/channel message
 │   ├── MailMessage.cs              # Email (sent or received)
 │   ├── CalendarEvent.cs            # Calendar event / meeting
-│   └── DevOpsCommit.cs            # Azure DevOps commit
+│   ├── DevOpsCommit.cs            # Azure DevOps commit
+│   └── TodoTask.cs                 # Microsoft To Do task
 │
 ├── Graph/
 │   ├── GraphClientFactory.cs       # Builds the authenticated GraphServiceClient
@@ -59,7 +61,8 @@ TeamsMessageFetcher/
 │   ├── MessageFetcher.cs           # Fetches Teams chats + channel messages
 │   ├── MailFetcher.cs              # Fetches sent and received email
 │   ├── CalendarFetcher.cs          # Fetches calendar events
-│   └── DevOpsFetcher.cs           # Fetches DevOps commits via REST API
+│   ├── DevOpsFetcher.cs           # Fetches DevOps commits via REST API
+│   └── TodoFetcher.cs             # Fetches Microsoft To Do tasks
 │
 ├── Services/
 │   ├── DailyActivityService.cs     # Orchestrates all fetchers; used by the UI
@@ -119,6 +122,7 @@ Go to **API permissions** → **Add a permission** → **Microsoft Graph** → *
 | `Calendars.Read` | Read your calendar events |
 | `Mail.Read` | Read your received emails |
 | `Mail.ReadSent` | Read your sent emails |
+| `Tasks.Read` | Read your Microsoft To Do tasks |
 
 Click **Grant admin consent** (requires an admin, or request consent from yours).
 
@@ -136,7 +140,9 @@ Edit `appsettings.json` with your IDs:
   "ClientId": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 
   "DevOpsOrganization": "your-org-name",
-  "DevOpsPat": "your-personal-access-token"
+  "DevOpsPat": "your-personal-access-token",
+
+  "TodoListName": "Tasks"
 }
 ```
 
@@ -146,6 +152,7 @@ Edit `appsettings.json` with your IDs:
 | `ClientId` | ✅ | Your App Registration's Application (client) ID |
 | `DevOpsOrganization` | ⬜ Optional | Your Azure DevOps organisation name (e.g. `contoso`) |
 | `DevOpsPat` | ⬜ Optional | A PAT with **Code (read)** scope. Commits are skipped if absent. |
+| `TodoListName` | ⬜ Optional | Name of the Microsoft To Do list to read tasks from. Defaults to `Tasks`. |
 
 You can also use environment variables instead of `appsettings.json`:
 
@@ -188,7 +195,7 @@ On first use, clicking **Fetch Activity** opens a Microsoft sign-in browser tab.
 
 1. **Select a date** using the date picker (defaults to today)
 2. Click **🔍 Fetch Activity** — a spinner shows while data is loading
-3. View your activity grouped by source in the four sections below the summary cards
+3. View your activity grouped by source in the five sections below the summary cards
 4. Click **💾 Export CSV** to save a `daily_summary_YYYY-MM-DD.csv` to your Desktop
 
 ---
@@ -202,3 +209,4 @@ On first use, clicking **Fetch Activity** opens a Microsoft sign-in browser tab.
 | **Rate limits** | The Graph API applies per-user throttling. If you have many teams or channels, occasional `429` responses are automatically retried by the SDK. |
 | **Admin consent** | `ChannelMessage.Read.All` and `Mail.Read` typically require admin consent. Contact your Microsoft 365 administrator if permissions are denied. |
 | **DevOps commits** | Commits are matched by the email address on your Microsoft 365 account (`me.Mail`). Ensure your DevOps commit author email matches. |
+| **To Do filtering** | The Graph To Do API has limited server-side filter support for `createdDateTime`/`completedDateTime`, so tasks are fetched and then filtered client-side for the selected day. |

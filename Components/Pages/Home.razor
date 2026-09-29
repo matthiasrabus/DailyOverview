@@ -49,12 +49,14 @@
     <SummaryCards Messages="@_messages" LoadingMessages="@_loadingMessages"
                   Events="@_events"     LoadingEvents="@_loadingEvents"
                   Emails="@_emails"     LoadingEmails="@_loadingEmails"
-                  Commits="@_commits"   LoadingCommits="@_loadingCommits" />
+                  Commits="@_commits"   LoadingCommits="@_loadingCommits"
+                  Tasks="@_todoTasks"   LoadingTasks="@_loadingTodo" />
 
     <MessagesSection Items="@_messages" IsLoading="@_loadingMessages" Error="@_messagesError" />
     <EventsSection   Items="@_events"   IsLoading="@_loadingEvents"   Error="@_eventsError" />
     <EmailSection    Items="@_emails"   IsLoading="@_loadingEmails"   Error="@_emailsError" />
     <CommitsSection  Items="@_commits"  IsLoading="@_loadingCommits"  Error="@_commitsError" />
+    <TodoSection     Items="@_todoTasks" IsLoading="@_loadingTodo"    Error="@_todoError" />
 }
 else
 {
@@ -73,16 +75,19 @@ else
     private List<CalendarEvent>? _events;
     private List<MailMessage>?   _emails;
     private List<DevOpsCommit>?  _commits;
+    private List<TodoTask>?      _todoTasks;
 
     private bool _loadingMessages;
     private bool _loadingEvents;
     private bool _loadingEmails;
     private bool _loadingCommits;
+    private bool _loadingTodo;
 
     private string? _messagesError;
     private string? _eventsError;
     private string? _emailsError;
     private string? _commitsError;
+    private string? _todoError;
 
     // ─── Page-level state ─────────────────────────────────────────────────────
 
@@ -92,7 +97,7 @@ else
     private string? _exportMessage;
 
     private bool AllDone =>
-        !_loadingMessages && !_loadingEvents && !_loadingEmails && !_loadingCommits;
+        !_loadingMessages && !_loadingEvents && !_loadingEmails && !_loadingCommits && !_loadingTodo;
 
     // ─── Fetch ────────────────────────────────────────────────────────────────
 
@@ -107,8 +112,9 @@ else
         _events   = null;
         _emails   = null;
         _commits  = null;
-        _messagesError = _eventsError = _emailsError = _commitsError = null;
-        _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = true;
+        _todoTasks = null;
+        _messagesError = _eventsError = _emailsError = _commitsError = _todoError = null;
+        _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = true;
 
         try
         {
@@ -139,13 +145,19 @@ else
                     () => ActivityService.FetchCommitsAsync(email, date),
                     r => _commits      = r,
                     e => _commitsError = e,
-                    () => _loadingCommits = false)
+                    () => _loadingCommits = false),
+
+                RunSection(
+                    () => ActivityService.FetchTodoTasksAsync(graph, date),
+                    r => _todoTasks  = r,
+                    e => _todoError  = e,
+                    () => _loadingTodo = false)
             );
         }
         catch (Exception ex)
         {
             _authError = ex.Message;
-            _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = false;
+            _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = false;
         }
         finally
         {
