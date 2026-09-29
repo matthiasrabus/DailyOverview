@@ -9,29 +9,33 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
     private readonly GraphServiceClient _graph    = graph;
     private readonly string             _listName = listName;
 
-    public async Task<List<TodoTask>> GetTasksForDateAsync(DateOnly date)
+    public async Task<List<TodoTask>> GetTasksForDateAsync(DateOnly date, Action<string>? onWarning = null)
     {
         var result = new List<TodoTask>();
 
         string? listId;
         try
         {
-            listId = await FindListIdAsync();
+            listId = await FindListIdAsync(onWarning);
         }
         catch (ODataError odataEx)
         {
-            LogODataError("list To Do lists", odataEx);
+            LogODataError("list To Do lists", odataEx, onWarning);
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not list To Do lists: {ex.Message}");
+            var message = $"Could not list To Do lists: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return result;
         }
 
         if (listId == null)
         {
-            Console.WriteLine($"   ⚠️  Could not find To Do list \"{_listName}\".");
+            var message = $"Could not find To Do list \"{_listName}\".";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return result;
         }
 
@@ -48,26 +52,30 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
         }
         catch (ODataError odataEx)
         {
-            LogODataError("fetch To Do tasks", odataEx);
+            LogODataError("fetch To Do tasks", odataEx, onWarning);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not fetch To Do tasks: {ex.Message}");
+            var message = $"Could not fetch To Do tasks: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
         }
 
         return result;
     }
 
-    private static void LogODataError(string action, ODataError odataEx)
+    private static void LogODataError(string action, ODataError odataEx, Action<string>? onWarning)
     {
         var detail = odataEx.Error?.Message ?? odataEx.Message;
         var code   = odataEx.Error?.Code;
-        Console.WriteLine($"   ⚠️  Could not {action}: {detail} (code: {code}, status: {odataEx.ResponseStatusCode})");
+        var message = $"Could not {action}: {detail} (code: {code}, status: {odataEx.ResponseStatusCode})";
+        Console.WriteLine($"   ⚠️  {message}");
+        onWarning?.Invoke(message);
     }
 
     // ─── List lookup ──────────────────────────────────────────────────────────
 
-    private async Task<string?> FindListIdAsync()
+    private async Task<string?> FindListIdAsync(Action<string>? onWarning)
     {
         var response = await _graph.Me.Todo.Lists.GetAsync();
 
@@ -88,7 +96,9 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
 
         if (match == null)
         {
-            Console.WriteLine("   ⚠️  No To Do lists found for this account.");
+            const string message = "No To Do lists found for this account.";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
         }
         else if (!string.Equals(match.DisplayName, _listName, StringComparison.OrdinalIgnoreCase))
         {

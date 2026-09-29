@@ -22,16 +22,7 @@
             <span>🔍 Fetch Activity</span>
         }
     </button>
-    @if (_hasFetched && AllDone)
-    {
-        <button class="btn btn-outline-secondary" @onclick="ExportCsv" title="Export to CSV on Desktop">
-            💾 Export CSV
-        </button>
-        @if (_exportMessage != null)
-        {
-            <span class="text-success small">@_exportMessage</span>
-        }
-    }
+
 </div>
 
 <!-- ─── Auth error ────────────────────────────────────────────────────────── -->
@@ -46,6 +37,10 @@
 <!-- ─── Activity (visible as soon as fetching starts) ───────────────────── -->
 @if (_hasFetched)
 {
+    <h4 class="mb-3 text-secondary">
+        📆 @_selectedDate.ToString("dddd, dd. MMMM yyyy")
+    </h4>
+
     <SummaryCards Messages="@_messages" LoadingMessages="@_loadingMessages"
                   Events="@_events"     LoadingEvents="@_loadingEvents"
                   Emails="@_emails"     LoadingEmails="@_loadingEmails"
@@ -65,6 +60,23 @@ else
         <p class="fs-5">Select a date and click <strong>Fetch Activity</strong> to load your daily summary.</p>
     </div>
 }
+
+<!-- ─── Warnings ─────────────────────────────────────────────────────────── -->
+@if (_warnings.Count > 0)
+{
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <strong>⚠️ @_warnings.Count Warning(s):</strong>
+        <ul class="mb-0 mt-1">
+            @foreach (var warning in _warnings)
+            {
+                <li class="small">@warning</li>
+            }
+        </ul>
+        <button type="button" class="btn-close" @onclick="() => _warnings.Clear()"></button>
+    </div>
+}
+
+
 
 @code {
     private DateTime _selectedDate = DateTime.Today;
@@ -94,7 +106,7 @@ else
     private bool    _hasFetched;
     private bool    _isFetching;
     private string? _authError;
-    private string? _exportMessage;
+    private readonly List<string> _warnings = [];
 
     private bool AllDone =>
         !_loadingMessages && !_loadingEvents && !_loadingEmails && !_loadingCommits && !_loadingTodo;
@@ -105,8 +117,8 @@ else
     {
         _isFetching      = true;
         _hasFetched      = true;
-        _exportMessage   = null;
         _authError       = null;
+        _warnings.Clear();
 
         _messages = null;
         _events   = null;
@@ -124,31 +136,31 @@ else
             // All four fetchers run simultaneously; each pushes a UI update when done
             await Task.WhenAll(
                 RunSection(
-                    () => ActivityService.FetchMessagesAsync(graph, userId, date),
+                    () => ActivityService.FetchMessagesAsync(graph, userId, date, AddWarning),
                     r => _messages      = r,
                     e => _messagesError = e,
                     () => _loadingMessages = false),
 
                 RunSection(
-                    () => ActivityService.FetchEventsAsync(graph, date),
+                    () => ActivityService.FetchEventsAsync(graph, date, AddWarning),
                     r => _events      = r,
                     e => _eventsError = e,
                     () => _loadingEvents = false),
 
                 RunSection(
-                    () => ActivityService.FetchEmailsAsync(graph, date),
+                    () => ActivityService.FetchEmailsAsync(graph, date, AddWarning),
                     r => _emails      = r,
                     e => _emailsError = e,
                     () => _loadingEmails = false),
 
                 RunSection(
-                    () => ActivityService.FetchCommitsAsync(email, date),
+                    () => ActivityService.FetchCommitsAsync(email, date, AddWarning),
                     r => _commits      = r,
                     e => _commitsError = e,
                     () => _loadingCommits = false),
 
                 RunSection(
-                    () => ActivityService.FetchTodoTasksAsync(graph, date),
+                    () => ActivityService.FetchTodoTasksAsync(graph, date, AddWarning),
                     r => _todoTasks  = r,
                     e => _todoError  = e,
                     () => _loadingTodo = false)
@@ -163,6 +175,13 @@ else
         {
             _isFetching = false;
         }
+    }
+
+    // Collects fetch warnings so they can be shown in a dedicated UI block
+    private void AddWarning(string message)
+    {
+        _warnings.Add(message);
+        InvokeAsync(StateHasChanged);
     }
 
     // Runs one fetcher, updates its state, then pushes the change to the browser
@@ -184,23 +203,6 @@ else
         {
             setDone();
             await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    // ─── Export ───────────────────────────────────────────────────────────────
-
-    private void ExportCsv()
-    {
-        try
-        {
-            var date = DateOnly.FromDateTime(_selectedDate);
-            new MessageExporter().ExportAll(
-                _messages ?? [], _events ?? [], _emails ?? [], _commits ?? [], date);
-            _exportMessage = $"Saved: daily_summary_{date:yyyy-MM-dd}.csv";
-        }
-        catch (Exception ex)
-        {
-            _authError = $"Export failed: {ex.Message}";
         }
     }
 }

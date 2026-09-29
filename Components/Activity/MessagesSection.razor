@@ -1,53 +1,68 @@
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-        <h5 class="mb-0 fw-semibold">💬 Teams Messages</h5>
-        @if (IsLoading)
+<SectionCard Title="Chats" Icon="💬" Count="@(Items?.Count ?? 0)"
+             IsLoading="@IsLoading" Error="@Error" LoadingLabel="Fetching Teams messages…">
+    <SummaryContent>
+        @if (Items?.Count > 0)
         {
-            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+            <text>↑ @Items.Count(m => m.IsSentByMe) sent · ↓ @Items.Count(m => !m.IsSentByMe) received</text>
         }
-        else
-        {
-            <span class="badge bg-primary rounded-pill">@(Items?.Count ?? 0)</span>
-        }
-    </div>
-
-    @if (IsLoading)
-    {
-        <SectionSpinner Label="Fetching Teams messages…" />
-    }
-    else if (Error != null)
-    {
-        <SectionError Message="@Error" />
-    }
-    else if (Items?.Count == 0)
-    {
-        <div class="card-body text-muted fst-italic">(none)</div>
-    }
-    else if (Items != null)
-    {
+    </SummaryContent>
+    <ChildContent>
         <div class="list-group list-group-flush">
-            @foreach (var group in Items.OrderBy(m => m.Timestamp).GroupBy(m => m.Source))
+            @foreach (var group in Items!.OrderBy(m => m.Timestamp).GroupBy(m => m.Source))
             {
-                <div class="list-group-item bg-light py-2 px-3 fw-semibold text-secondary small">
-                    📁 @group.Key
-                </div>
-                @foreach (var msg in group)
-                {
-                    <div class="list-group-item list-group-item-action py-2 px-3 @(msg.IsSentByMe ? "list-group-item-success" : "")">
-                        <div class="d-flex align-items-start gap-3">
-                            <span class="text-muted small text-nowrap mt-1">@msg.Timestamp.ToString("HH:mm")</span>
-                            <span class="fw-semibold text-nowrap sender-col small mt-1">@msg.SenderName</span>
-                            <span class="text-body small">@msg.BodyPreview</span>
-                        </div>
+                var chatName = group.Key;
+                var sentCount = group.Count(m => m.IsSentByMe);
+                var receivedCount = group.Count() - sentCount;
+                var lastTimestamp = group.Max(m => m.Timestamp);
+                var isCollapsed = IsChatCollapsed(chatName);
+
+                <div class="list-group-item bg-light py-2 px-3"
+                     style="cursor:pointer;" @onclick="() => ToggleChat(chatName)">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold text-secondary small">
+                            <span class="text-muted">@(isCollapsed ? "▸" : "▾")</span>
+                            📁 @chatName
+                        </span>
+                        <span class="text-muted small">
+                            ↑ @sentCount · ↓ @receivedCount · zuletzt @lastTimestamp.ToString("HH:mm")
+                        </span>
                     </div>
+                </div>
+                @if (!isCollapsed)
+                {
+                    @foreach (var msg in group)
+                    {
+                        <div class="list-group-item list-group-item-action py-2 px-3 @(msg.IsSentByMe ? "list-group-item-success" : "")">
+                            <div class="d-flex align-items-start gap-3">
+                                <span class="text-muted small text-nowrap mt-1">@msg.Timestamp.ToString("HH:mm")</span>
+                                <span class="fw-semibold text-nowrap sender-col small mt-1">@msg.SenderName</span>
+                                <span class="text-body small">@msg.BodyPreview</span>
+                            </div>
+                        </div>
+                    }
                 }
             }
         </div>
-    }
-</div>
+    </ChildContent>
+</SectionCard>
 
 @code {
     [Parameter] public List<TeamMessage>? Items     { get; set; }
     [Parameter] public bool               IsLoading { get; set; }
     [Parameter] public string?            Error     { get; set; }
+
+    private readonly HashSet<string> _expandedChats = [];
+
+    // Chats start collapsed by default
+    private bool IsChatCollapsed(string chatName) => !_expandedChats.Contains(chatName);
+
+    private void ToggleChat(string chatName)
+    {
+        if (!_expandedChats.Add(chatName))
+        {
+            _expandedChats.Remove(chatName);
+        }
+    }
 }
+
+

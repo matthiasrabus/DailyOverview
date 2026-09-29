@@ -18,14 +18,14 @@ public class MessageFetcher
         _myUserId = myUserId;
     }
 
-    public async Task<List<TeamMessage>> GetMessagesForDateAsync(DateOnly date)
+    public async Task<List<TeamMessage>> GetMessagesForDateAsync(DateOnly date, Action<string>? onWarning = null)
     {
         var startUtc = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
         var endUtc   = startUtc.AddDays(1);
 
         // Chats and channels are independent — start both at the same time
-        var chatTask    = FetchChatMessagesAsync(startUtc, endUtc);
-        var channelTask = FetchChannelMessagesAsync(startUtc, endUtc);
+        var chatTask    = FetchChatMessagesAsync(startUtc, endUtc, onWarning);
+        var channelTask = FetchChannelMessagesAsync(startUtc, endUtc, onWarning);
         await Task.WhenAll(chatTask, channelTask);
 
         return [.. chatTask.Result, .. channelTask.Result];
@@ -35,7 +35,7 @@ public class MessageFetcher
     // Graph does not support $filter by date on chat messages, so we page each
     // chat individually. Fetches run in parallel (capped at throttle limit).
 
-    private async Task<List<TeamMessage>> FetchChatMessagesAsync(DateTime start, DateTime end)
+    private async Task<List<TeamMessage>> FetchChatMessagesAsync(DateTime start, DateTime end, Action<string>? onWarning)
     {
         try
         {
@@ -48,19 +48,21 @@ public class MessageFetcher
             var chats = await PaginateAsync<Chat, ChatCollectionResponse>(chatsPage);
 
             var tasks   = chats.Select(chat =>
-                Throttled(() => FetchMessagesFromChatAsync(chat.Id!, GetChatDisplayName(chat), start, end)));
+                Throttled(() => FetchMessagesFromChatAsync(chat.Id!, GetChatDisplayName(chat), start, end, onWarning)));
             var results = await Task.WhenAll(tasks);
             return [.. results.SelectMany(r => r)];
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not fetch chats: {ex.Message}");
+            var message = $"Could not fetch chats: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return [];
         }
     }
 
     private async Task<List<TeamMessage>> FetchMessagesFromChatAsync(
-        string chatId, string chatName, DateTime start, DateTime end)
+        string chatId, string chatName, DateTime start, DateTime end, Action<string>? onWarning)
     {
         try
         {
@@ -83,7 +85,9 @@ public class MessageFetcher
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Skipped chat '{chatName}': {ex.Message}");
+            var message = $"Skipped chat '{chatName}': {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return [];
         }
     }
@@ -92,7 +96,7 @@ public class MessageFetcher
     // Channel messages support server-side $filter by date, so fetching them
     // in parallel is safe — each call returns only the matching day's messages.
 
-    private async Task<List<TeamMessage>> FetchChannelMessagesAsync(DateTime start, DateTime end)
+    private async Task<List<TeamMessage>> FetchChannelMessagesAsync(DateTime start, DateTime end, Action<string>? onWarning)
     {
         var result = new List<TeamMessage>();
         try
@@ -113,20 +117,22 @@ public class MessageFetcher
             var channelRefs = channelRefLists.SelectMany(r => r);
 
             var tasks = channelRefs.Select(r =>
-                Throttled(() => FetchMessagesFromChannelAsync(r.TeamId, r.ChannelId, r.Source, start, end)));
+                Throttled(() => FetchMessagesFromChannelAsync(r.TeamId, r.ChannelId, r.Source, start, end, onWarning)));
 
             var results = await Task.WhenAll(tasks);
             result.AddRange(results.SelectMany(r => r));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not fetch channel messages: {ex.Message}");
+            var message = $"Could not fetch channel messages: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
         }
         return result;
     }
 
     private async Task<List<TeamMessage>> FetchMessagesFromChannelAsync(
-        string teamId, string channelId, string sourceName, DateTime start, DateTime end)
+        string teamId, string channelId, string sourceName, DateTime start, DateTime end, Action<string>? onWarning)
     {
         try
         {
@@ -145,7 +151,9 @@ public class MessageFetcher
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Skipped channel '{sourceName}': {ex.Message}");
+            var message = $"Skipped channel '{sourceName}': {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return [];
         }
     }
@@ -190,7 +198,7 @@ public class MessageFetcher
     private static string GetChatDisplayName(Chat chat)
     {
         if (!string.IsNullOrEmpty(chat.Topic))
-            return $"Chat: {chat.Topic}";
+            return chat.Topic;
 
         if (chat.Members?.Count > 0)
         {
@@ -199,7 +207,7 @@ public class MessageFetcher
                 .OfType<AadUserConversationMember>()
                 .Select(m => m.DisplayName ?? "?")
                 .Where(n => n != "?");
-            return $"Chat: {string.Join(", ", names)}";
+            return string.Join(", ", names);
         }
 
         return $"Chat ({chat.ChatType})";

@@ -10,7 +10,7 @@ public class MailFetcher(GraphServiceClient graph)
     private static readonly string[] SelectFields =
         ["subject", "from", "toRecipients", "receivedDateTime", "sentDateTime", "bodyPreview"];
 
-    public async Task<List<MailMessage>> GetMailForDateAsync(DateOnly date)
+    public async Task<List<MailMessage>> GetMailForDateAsync(DateOnly date, Action<string>? onWarning = null)
     {
         var startUtc = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
         var endUtc   = startUtc.AddDays(1);
@@ -18,15 +18,15 @@ public class MailFetcher(GraphServiceClient graph)
         var startStr = startUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
         var endStr   = endUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-        var received = await FetchReceivedAsync(startStr, endStr);
-        var sent     = await FetchSentAsync(startStr, endStr);
+        var received = await FetchReceivedAsync(startStr, endStr, onWarning);
+        var sent     = await FetchSentAsync(startStr, endStr, onWarning);
 
         return [.. received, .. sent];
     }
 
     // ─── Received ─────────────────────────────────────────────────────────────
 
-    private async Task<List<MailMessage>> FetchReceivedAsync(string startStr, string endStr)
+    private async Task<List<MailMessage>> FetchReceivedAsync(string startStr, string endStr, Action<string>? onWarning)
     {
         try
         {
@@ -42,14 +42,16 @@ public class MailFetcher(GraphServiceClient graph)
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not fetch received mail: {ex.Message}");
+            var message = $"Could not fetch received mail: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return [];
         }
     }
 
     // ─── Sent ─────────────────────────────────────────────────────────────────
 
-    private async Task<List<MailMessage>> FetchSentAsync(string startStr, string endStr)
+    private async Task<List<MailMessage>> FetchSentAsync(string startStr, string endStr, Action<string>? onWarning)
     {
         try
         {
@@ -65,7 +67,9 @@ public class MailFetcher(GraphServiceClient graph)
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not fetch sent mail: {ex.Message}");
+            var message = $"Could not fetch sent mail: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return [];
         }
     }

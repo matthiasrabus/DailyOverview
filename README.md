@@ -16,7 +16,6 @@ A **Blazor Server** web app built on **.NET 10** that fetches and displays your 
 
 - Interactive date picker — browse any past date
 - Summary cards showing sent/received counts at a glance
-- CSV export saved to your Desktop
 - Microsoft sign-in via interactive browser (OAuth 2.0, token cached in memory)
 
 ---
@@ -65,8 +64,7 @@ TeamsMessageFetcher/
 │   └── TodoFetcher.cs             # Fetches Microsoft To Do tasks
 │
 ├── Services/
-│   ├── DailyActivityService.cs     # Orchestrates all fetchers; used by the UI
-│   └── MessageExporter.cs         # Exports data to CSV
+│   └── DailyActivityService.cs     # Orchestrates all fetchers; used by the UI
 │
 ├── Components/
 │   ├── Layout/
@@ -196,7 +194,6 @@ On first use, clicking **Fetch Activity** opens a Microsoft sign-in browser tab.
 1. **Select a date** using the date picker (defaults to today)
 2. Click **🔍 Fetch Activity** — a spinner shows while data is loading
 3. View your activity grouped by source in the five sections below the summary cards
-4. Click **💾 Export CSV** to save a `daily_summary_YYYY-MM-DD.csv` to your Desktop
 
 ---
 

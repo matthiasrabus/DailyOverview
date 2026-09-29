@@ -1,32 +1,14 @@
-<div class="card shadow-sm mb-4">
-    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-        <h5 class="mb-0 fw-semibold">📅 Calendar</h5>
-        @if (IsLoading)
+<SectionCard Title="Calendar" Icon="📅" Count="@(Items?.Count ?? 0)"
+             IsLoading="@IsLoading" Error="@Error" LoadingLabel="Fetching calendar events…">
+    <SummaryContent>
+        @if (Items?.Count > 0)
         {
-            <span class="spinner-border spinner-border-sm text-primary" role="status"></span>
+            <text>@((int)Items.Sum(e => e.Duration.TotalMinutes)) min total</text>
         }
-        else
-        {
-            <span class="badge bg-primary rounded-pill">@(Items?.Count ?? 0)</span>
-        }
-    </div>
-
-    @if (IsLoading)
-    {
-        <SectionSpinner Label="Fetching calendar events…" />
-    }
-    else if (Error != null)
-    {
-        <SectionError Message="@Error" />
-    }
-    else if (Items?.Count == 0)
-    {
-        <div class="card-body text-muted fst-italic">(none)</div>
-    }
-    else if (Items != null)
-    {
+    </SummaryContent>
+    <ChildContent>
         <div class="list-group list-group-flush">
-            @foreach (var ev in Items.OrderBy(e => e.Start))
+            @foreach (var ev in Items!.OrderBy(e => e.Start))
             {
                 <div class="list-group-item list-group-item-action py-2 px-3">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
@@ -55,8 +37,8 @@
                 </div>
             }
         </div>
-    }
-</div>
+    </ChildContent>
+</SectionCard>
 
 @code {
     [Parameter] public List<CalendarEvent>? Items     { get; set; }

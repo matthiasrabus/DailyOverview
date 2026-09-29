@@ -7,7 +7,7 @@ public class CalendarFetcher(GraphServiceClient graph)
 {
     private readonly GraphServiceClient _graph = graph;
 
-    public async Task<List<CalendarEvent>> GetEventsForDateAsync(DateOnly date)
+    public async Task<List<CalendarEvent>> GetEventsForDateAsync(DateOnly date, Action<string>? onWarning = null)
     {
         var result = new List<CalendarEvent>();
 
@@ -21,17 +21,21 @@ public class CalendarFetcher(GraphServiceClient graph)
                 config.QueryParameters.StartDateTime = startUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 config.QueryParameters.EndDateTime   = endUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 config.QueryParameters.Select        = ["subject", "start", "end", "organizer",
-                                                        "isOrganizer", "isOnlineMeeting", "attendees"];
+                                                        "isOrganizer", "isOnlineMeeting", "attendees", "sensitivity"];
                 config.QueryParameters.Top           = 50;
             });
 
             var events = await GraphPaginator.PaginateAsync<Event, EventCollectionResponse>(_graph, response);
 
-            result.AddRange(events.Select(Map));
+            result.AddRange(events
+                .Where(ev => ev.Sensitivity != Sensitivity.Private)
+                .Select(Map));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not fetch calendar events: {ex.Message}");
+            var message = $"Could not fetch calendar events: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
         }
 
         return result;

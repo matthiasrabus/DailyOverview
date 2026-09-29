@@ -1,114 +1,96 @@
-<div class="row g-3 mb-4">
+<div class="card shadow-sm mb-4">
+    <div class="list-group list-group-flush list-group-horizontal-lg">
 
-    <!-- ─── Messages ─────────────────────────────────────────────────────── -->
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body py-3">
-                <div class="display-6 mb-1">💬</div>
-                @if (LoadingMessages)
+        <!-- ─── Messages ─────────────────────────────────────────────────── -->
+        <div class="list-group-item flex-fill py-3 px-3 text-center">
+            <div class="fs-4 mb-1">💬</div>
+            @if (LoadingMessages)
+            {
+                <div class="spinner-border spinner-border-sm text-primary my-1" role="status"></div>
+            }
+            else
+            {
+                <div class="fs-3 fw-bold text-primary lh-1">@(Messages?.Count ?? 0)</div>
+                <div class="small mt-1">
+                    <span class="text-success">↑ @(Messages?.Count(m => m.IsSentByMe) ?? 0)</span>
+                    <span class="text-muted mx-1">·</span>
+                    <span class="text-info">↓ @(Messages?.Count(m => !m.IsSentByMe) ?? 0)</span>
+                </div>
+            }
+            <div class="text-muted small mt-1">Teams Messages</div>
+        </div>
+
+        <!-- ─── Events ───────────────────────────────────────────────────── -->
+        <div class="list-group-item flex-fill py-3 px-3 text-center">
+            <div class="fs-4 mb-1">📅</div>
+            @if (LoadingEvents)
+            {
+                <div class="spinner-border spinner-border-sm text-primary my-1" role="status"></div>
+            }
+            else
+            {
+                <div class="fs-3 fw-bold text-primary lh-1">@(Events?.Count ?? 0)</div>
+                @if (Events?.Count > 0)
                 {
-                    <div class="spinner-border text-primary my-1" style="width:1.6rem;height:1.6rem;" role="status"></div>
-                }
-                else
-                {
-                    <div class="fs-2 fw-bold text-primary lh-1">@(Messages?.Count ?? 0)</div>
-                    <div class="small mt-1">
-                        <span class="text-success">↑ @(Messages?.Count(m => m.IsSentByMe) ?? 0) sent</span>
-                        <span class="text-muted mx-1">·</span>
-                        <span class="text-info">↓ @(Messages?.Count(m => !m.IsSentByMe) ?? 0) received</span>
+                    <div class="small mt-1 text-muted">
+                        @((int)Events.Sum(e => e.Duration.TotalMinutes)) min
                     </div>
                 }
-                <div class="text-muted small mt-1">Teams Messages</div>
-            </div>
+            }
+            <div class="text-muted small mt-1">Meetings</div>
         </div>
-    </div>
 
-    <!-- ─── Events ───────────────────────────────────────────────────────── -->
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body py-3">
-                <div class="display-6 mb-1">📅</div>
-                @if (LoadingEvents)
-                {
-                    <div class="spinner-border text-primary my-1" style="width:1.6rem;height:1.6rem;" role="status"></div>
-                }
-                else
-                {
-                    <div class="fs-2 fw-bold text-primary lh-1">@(Events?.Count ?? 0)</div>
-                    @if (Events?.Count > 0)
-                    {
-                        <div class="small mt-1 text-muted">
-                            @((int)Events.Sum(e => e.Duration.TotalMinutes)) min total
-                        </div>
-                    }
-                }
-                <div class="text-muted small mt-1">Meetings</div>
-            </div>
+        <!-- ─── Emails ───────────────────────────────────────────────────── -->
+        <div class="list-group-item flex-fill py-3 px-3 text-center">
+            <div class="fs-4 mb-1">📧</div>
+            @if (LoadingEmails)
+            {
+                <div class="spinner-border spinner-border-sm text-primary my-1" role="status"></div>
+            }
+            else
+            {
+                <div class="fs-3 fw-bold text-primary lh-1">@(Emails?.Count ?? 0)</div>
+                <div class="small mt-1">
+                    <span class="text-success">↑ @(Emails?.Count(m => m.IsSent) ?? 0)</span>
+                    <span class="text-muted mx-1">·</span>
+                    <span class="text-info">↓ @(Emails?.Count(m => !m.IsSent) ?? 0)</span>
+                </div>
+            }
+            <div class="text-muted small mt-1">Emails</div>
         </div>
-    </div>
 
-    <!-- ─── Emails ───────────────────────────────────────────────────────── -->
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body py-3">
-                <div class="display-6 mb-1">📧</div>
-                @if (LoadingEmails)
-                {
-                    <div class="spinner-border text-primary my-1" style="width:1.6rem;height:1.6rem;" role="status"></div>
-                }
-                else
-                {
-                    <div class="fs-2 fw-bold text-primary lh-1">@(Emails?.Count ?? 0)</div>
-                    <div class="small mt-1">
-                        <span class="text-success">↑ @(Emails?.Count(m => m.IsSent) ?? 0) sent</span>
-                        <span class="text-muted mx-1">·</span>
-                        <span class="text-info">↓ @(Emails?.Count(m => !m.IsSent) ?? 0) received</span>
-                    </div>
-                }
-                <div class="text-muted small mt-1">Emails</div>
-            </div>
+        <!-- ─── Commits ──────────────────────────────────────────────────── -->
+        <div class="list-group-item flex-fill py-3 px-3 text-center">
+            <div class="fs-4 mb-1">🔧</div>
+            @if (LoadingCommits)
+            {
+                <div class="spinner-border spinner-border-sm text-primary my-1" role="status"></div>
+            }
+            else
+            {
+                <div class="fs-3 fw-bold text-primary lh-1">@(Commits?.Count ?? 0)</div>
+            }
+            <div class="text-muted small mt-1">Commits</div>
         </div>
-    </div>
 
-    <!-- ─── Commits ───────────────────────────────────────────────────────── -->
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body py-3">
-                <div class="display-6 mb-1">🔧</div>
-                @if (LoadingCommits)
-                {
-                    <div class="spinner-border text-primary my-1" style="width:1.6rem;height:1.6rem;" role="status"></div>
-                }
-                else
-                {
-                    <div class="fs-2 fw-bold text-primary lh-1">@(Commits?.Count ?? 0)</div>
-                }
-                <div class="text-muted small mt-1">DevOps Commits</div>
-            </div>
+        <!-- ─── To Do ────────────────────────────────────────────────────── -->
+        <div class="list-group-item flex-fill py-3 px-3 text-center">
+            <div class="fs-4 mb-1">✅</div>
+            @if (LoadingTasks)
+            {
+                <div class="spinner-border spinner-border-sm text-primary my-1" role="status"></div>
+            }
+            else
+            {
+                <div class="fs-3 fw-bold text-primary lh-1">@(Tasks?.Count ?? 0)</div>
+                <div class="small mt-1">
+                    <span class="text-success">✓ @(Tasks?.Count(t => t.IsCompleted) ?? 0)</span>
+                </div>
+            }
+            <div class="text-muted small mt-1">To Dos</div>
         </div>
-    </div>
 
-    <!-- ─── To Do ────────────────────────────────────────────────────────── -->
-    <div class="col-6 col-lg-3">
-        <div class="card border-0 shadow-sm text-center h-100">
-            <div class="card-body py-3">
-                <div class="display-6 mb-1">✅</div>
-                @if (LoadingTasks)
-                {
-                    <div class="spinner-border text-primary my-1" style="width:1.6rem;height:1.6rem;" role="status"></div>
-                }
-                else
-                {
-                    <div class="fs-2 fw-bold text-primary lh-1">@(Tasks?.Count ?? 0)</div>
-                    <div class="small mt-1">
-                        <span class="text-success">✓ @(Tasks?.Count(t => t.IsCompleted) ?? 0) done</span>
-                    </div>
-                }
-                <div class="text-muted small mt-1">To Do Tasks</div>
-            </div>
-        </div>
     </div>
-
 </div>
 
 @code {

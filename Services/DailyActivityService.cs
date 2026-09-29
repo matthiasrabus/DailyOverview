@@ -31,18 +31,18 @@ public class DailyActivityService
 
     // userId is passed in so MessageFetcher can detect "sent by me" without
     // making a redundant /me call of its own
-    public Task<List<TeamMessage>> FetchMessagesAsync(GraphServiceClient graph, string userId, DateOnly date)
-        => new MessageFetcher(graph, userId).GetMessagesForDateAsync(date);
+    public Task<List<TeamMessage>> FetchMessagesAsync(GraphServiceClient graph, string userId, DateOnly date, Action<string>? onWarning = null)
+        => new MessageFetcher(graph, userId).GetMessagesForDateAsync(date, onWarning);
 
-    public Task<List<CalendarEvent>> FetchEventsAsync(GraphServiceClient graph, DateOnly date)
-        => new CalendarFetcher(graph).GetEventsForDateAsync(date);
+    public Task<List<CalendarEvent>> FetchEventsAsync(GraphServiceClient graph, DateOnly date, Action<string>? onWarning = null)
+        => new CalendarFetcher(graph).GetEventsForDateAsync(date, onWarning);
 
-    public Task<List<MailMessage>> FetchEmailsAsync(GraphServiceClient graph, DateOnly date)
-        => new MailFetcher(graph).GetMailForDateAsync(date);
+    public Task<List<MailMessage>> FetchEmailsAsync(GraphServiceClient graph, DateOnly date, Action<string>? onWarning = null)
+        => new MailFetcher(graph).GetMailForDateAsync(date, onWarning);
 
-    public Task<List<DevOpsCommit>> FetchCommitsAsync(string userEmail, DateOnly date)
-        => new DevOpsFetcher(_config, userEmail).GetCommitsForDateAsync(date);
+    public Task<List<DevOpsCommit>> FetchCommitsAsync(string userEmail, DateOnly date, Action<string>? onWarning = null)
+        => new DevOpsFetcher(_config, userEmail).GetCommitsForDateAsync(date, onWarning);
 
-    public Task<List<TodoTask>> FetchTodoTasksAsync(GraphServiceClient graph, DateOnly date)
-        => new TodoFetcher(graph, _config.TodoListName).GetTasksForDateAsync(date);
+    public Task<List<TodoTask>> FetchTodoTasksAsync(GraphServiceClient graph, DateOnly date, Action<string>? onWarning = null)
+        => new TodoFetcher(graph, _config.TodoListName).GetTasksForDateAsync(date, onWarning);
 }

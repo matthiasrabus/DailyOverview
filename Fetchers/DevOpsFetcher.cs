@@ -30,11 +30,13 @@ public class DevOpsFetcher
         }
     }
 
-    public async Task<List<DevOpsCommit>> GetCommitsForDateAsync(DateOnly date)
+    public async Task<List<DevOpsCommit>> GetCommitsForDateAsync(DateOnly date, Action<string>? onWarning = null)
     {
         if (string.IsNullOrEmpty(_org) || !_http.DefaultRequestHeaders.Contains("Authorization"))
         {
-            Console.WriteLine("   ⚠️  DevOps org or PAT not configured — skipping commits.");
+            const string message = "DevOps org or PAT not configured — skipping commits.";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
             return [];
         }
 
@@ -60,7 +62,9 @@ public class DevOpsFetcher
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"   ⚠️  Could not fetch DevOps commits: {ex.Message}");
+            var message = $"Could not fetch DevOps commits: {ex.Message}";
+            Console.WriteLine($"   ⚠️  {message}");
+            onWarning?.Invoke(message);
         }
 
         return result;
