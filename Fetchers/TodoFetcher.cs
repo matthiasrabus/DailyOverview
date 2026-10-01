@@ -113,9 +113,6 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
 
     private static bool WasCreatedOrCompletedOn(TodoTask task, DateOnly date)
     {
-        if (DateOnly.FromDateTime(task.CreatedDateTime) == date)
-            return true;
-
         return task.CompletedDateTime.HasValue &&
                DateOnly.FromDateTime(task.CompletedDateTime.Value) == date;
     }

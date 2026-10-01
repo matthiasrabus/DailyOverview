@@ -12,9 +12,10 @@
             {
                 <div class="list-group-item list-group-item-action py-2 px-3">
                     <div class="d-flex align-items-center gap-3 flex-wrap">
-                        <span class="@(task.IsCompleted ? "text-decoration-line-through text-muted" : "fw-semibold")">
-                            @task.Title
-                        </span>
+                        <a href="https://to-do.office.com/tasks/id/@task.Id/details" target="_blank" rel="noopener"
+                           class="text-decoration-none @(task.IsCompleted ? "text-decoration-line-through text-muted" : "fw-semibold")">
+                            @task.Title 🔗
+                        </a>
                         <div class="d-flex gap-1 ms-auto flex-shrink-0">
                             @if (task.DueDateTime.HasValue)
                             {

@@ -21,7 +21,7 @@ public class CalendarFetcher(GraphServiceClient graph)
                 config.QueryParameters.StartDateTime = startUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 config.QueryParameters.EndDateTime   = endUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
                 config.QueryParameters.Select        = ["subject", "start", "end", "organizer",
-                                                        "isOrganizer", "isOnlineMeeting", "attendees", "sensitivity"];
+                                                        "isOrganizer", "isOnlineMeeting", "attendees", "sensitivity", "webLink"];
                 config.QueryParameters.Top           = 50;
             });
 
@@ -52,6 +52,7 @@ public class CalendarFetcher(GraphServiceClient graph)
         Organizer   = ev.Organizer?.EmailAddress?.Name ?? "Unknown",
         IsOrganizer = ev.IsOrganizer ?? false,
         IsOnline    = ev.IsOnlineMeeting ?? false,
+        WebLink     = ev.WebLink ?? string.Empty,
         Attendees   = ev.Attendees?
                         .Select(a => a.EmailAddress?.Name ?? a.EmailAddress?.Address ?? "?")
                         .ToList() ?? [],

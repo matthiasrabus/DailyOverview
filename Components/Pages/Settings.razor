@@ -1,0 +1,92 @@
+@page "/settings"
+@rendermode InteractiveServer
+@inject AppConfig Config
+
+<PageTitle>Settings</PageTitle>
+
+<h3 class="mb-4">⚙️ Settings</h3>
+
+<div class="card mb-4">
+    <div class="card-header fw-semibold">Configuration (appsettings.json)</div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Tenant ID</label>
+            <input class="form-control" @bind="Config.TenantId" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Client ID</label>
+            <input class="form-control" @bind="Config.ClientId" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">DevOps Organization</label>
+            <input class="form-control" @bind="Config.DevOpsOrganization" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">DevOps PAT</label>
+            <input class="form-control" type="password" @bind="Config.DevOpsPat" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">To Do List Name</label>
+            <input class="form-control" @bind="Config.TodoListName" />
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header fw-semibold">Components</div>
+    <div class="card-body">
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="swMessages" @bind="Config.EnableMessages" />
+            <label class="form-check-label" for="swMessages">Teams Messages</label>
+        </div>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="swEvents" @bind="Config.EnableEvents" />
+            <label class="form-check-label" for="swEvents">Calendar Events</label>
+        </div>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="swEmails" @bind="Config.EnableEmails" />
+            <label class="form-check-label" for="swEmails">Mails</label>
+        </div>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="swCommits" @bind="Config.EnableCommits" />
+            <label class="form-check-label" for="swCommits">Commits</label>
+        </div>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="swTodo" @bind="Config.EnableTodo" />
+            <label class="form-check-label" for="swTodo">To Do</label>
+        </div>
+        <hr />
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="swWarnings" @bind="Config.ShowWarnings" />
+            <label class="form-check-label" for="swWarnings">Show warnings</label>
+        </div>
+    </div>
+</div>
+
+<button class="btn btn-primary" @onclick="Save">💾 Save</button>
+<a class="btn btn-outline-secondary ms-2" href="/">Back</a>
+
+@if (_message != null)
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success") mt-3">@_message</div>
+}
+
+@code {
+    private string? _message;
+    private bool _isError;
+
+    private void Save()
+    {
+        try
+        {
+            Config.Save();
+            _message = "Settings saved.";
+            _isError = false;
+        }
+        catch (Exception ex)
+        {
+            _message = ex.Message;
+            _isError = true;
+        }
+    }
+}

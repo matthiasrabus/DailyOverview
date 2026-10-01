@@ -36,7 +36,15 @@
                             <div class="d-flex align-items-start gap-3">
                                 <span class="text-muted small text-nowrap mt-1">@msg.Timestamp.ToString("HH:mm")</span>
                                 <span class="fw-semibold text-nowrap sender-col small mt-1">@msg.SenderName</span>
-                                <span class="text-body small">@msg.BodyPreview</span>
+                                @if (!string.IsNullOrEmpty(msg.WebLink))
+                                {
+                                    <a href="@msg.WebLink.Replace("https://", "msteams://")" class="text-body small text-decoration-none" title="In Teams öffnen">@msg.BodyPreview 🔗</a>
+                                    <a href="@msg.WebLink" target="_blank" rel="noopener" class="small text-decoration-none ms-auto text-nowrap" title="Im Browser öffnen">🌐</a>
+                                }
+                                else
+                                {
+                                    <span class="text-body small">@msg.BodyPreview</span>
+                                }
                             </div>
                         </div>
                     }

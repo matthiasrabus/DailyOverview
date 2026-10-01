@@ -11,4 +11,5 @@ public class MailMessage
     public List<string> To     { get; set; } = [];
     public bool IsSent         { get; set; }
     public string BodyPreview  { get; set; } = string.Empty;
+    public string WebLink      { get; set; } = string.Empty;
 }

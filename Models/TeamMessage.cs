@@ -12,4 +12,5 @@ public class TeamMessage
     public string BodyPreview { get; set; } = string.Empty;  // Truncated, HTML stripped
     public string FullBody { get; set; } = string.Empty;     // Full text
     public string MessageType { get; set; } = "message";
+    public string WebLink { get; set; } = string.Empty;
 }

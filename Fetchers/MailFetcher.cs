@@ -8,7 +8,7 @@ public class MailFetcher(GraphServiceClient graph)
     private readonly GraphServiceClient _graph = graph;
 
     private static readonly string[] SelectFields =
-        ["subject", "from", "toRecipients", "receivedDateTime", "sentDateTime", "bodyPreview"];
+        ["subject", "from", "toRecipients", "receivedDateTime", "sentDateTime", "bodyPreview", "webLink"];
 
     public async Task<List<MailMessage>> GetMailForDateAsync(DateOnly date, Action<string>? onWarning = null)
     {
@@ -89,5 +89,6 @@ public class MailFetcher(GraphServiceClient graph)
                         .ToList() ?? [],
         IsSent      = isSent,
         BodyPreview = msg.BodyPreview ?? string.Empty,
+        WebLink     = msg.WebLink ?? string.Empty,
     };
 }

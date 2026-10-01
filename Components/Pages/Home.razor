@@ -1,8 +1,9 @@
 @page "/"
 @rendermode InteractiveServer
 @inject DailyActivityService ActivityService
+@inject AppConfig Config
 
-<PageTitle>Daily Activity – @_selectedDate.ToString("yyyy-MM-dd")</PageTitle>
+<PageTitle>@(_fetchedDate.HasValue ? $"Daily Activity – {_fetchedDate:yyyy-MM-dd}" : "Daily Activity")</PageTitle>
 
 <!-- ─── Toolbar ──────────────────────────────────────────────────────────── -->
 <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
@@ -47,11 +48,11 @@
                   Commits="@_commits"   LoadingCommits="@_loadingCommits"
                   Tasks="@_todoTasks"   LoadingTasks="@_loadingTodo" />
 
-    <MessagesSection Items="@_messages" IsLoading="@_loadingMessages" Error="@_messagesError" />
-    <EventsSection   Items="@_events"   IsLoading="@_loadingEvents"   Error="@_eventsError" />
-    <EmailSection    Items="@_emails"   IsLoading="@_loadingEmails"   Error="@_emailsError" />
-    <CommitsSection  Items="@_commits"  IsLoading="@_loadingCommits"  Error="@_commitsError" />
-    <TodoSection     Items="@_todoTasks" IsLoading="@_loadingTodo"    Error="@_todoError" />
+    @if (Config.EnableMessages) { <MessagesSection Items="@_messages" IsLoading="@_loadingMessages" Error="@_messagesError" /> }
+    @if (Config.EnableEvents)   { <EventsSection   Items="@_events"   IsLoading="@_loadingEvents"   Error="@_eventsError" /> }
+    @if (Config.EnableEmails)   { <EmailSection    Items="@_emails"   IsLoading="@_loadingEmails"   Error="@_emailsError" /> }
+    @if (Config.EnableCommits)  { <CommitsSection  Items="@_commits"  IsLoading="@_loadingCommits"  Error="@_commitsError" /> }
+    @if (Config.EnableTodo)     { <TodoSection     Items="@_todoTasks" IsLoading="@_loadingTodo"    Error="@_todoError" /> }
 }
 else
 {
@@ -62,7 +63,7 @@ else
 }
 
 <!-- ─── Warnings ─────────────────────────────────────────────────────────── -->
-@if (_warnings.Count > 0)
+@if (Config.ShowWarnings && _warnings.Count > 0)
 {
     <div class="alert alert-warning alert-dismissible" role="alert">
         <strong>⚠️ @_warnings.Count Warning(s):</strong>
@@ -104,6 +105,7 @@ else
     // ─── Page-level state ─────────────────────────────────────────────────────
 
     private bool    _hasFetched;
+    private DateTime? _fetchedDate;
     private bool    _isFetching;
     private string? _authError;
     private readonly List<string> _warnings = [];
@@ -117,6 +119,7 @@ else
     {
         _isFetching      = true;
         _hasFetched      = true;
+        _fetchedDate     = _selectedDate;
         _authError       = null;
         _warnings.Clear();
 
@@ -126,7 +129,11 @@ else
         _commits  = null;
         _todoTasks = null;
         _messagesError = _eventsError = _emailsError = _commitsError = _todoError = null;
-        _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = true;
+        _loadingMessages = Config.EnableMessages;
+        _loadingEvents   = Config.EnableEvents;
+        _loadingEmails   = Config.EnableEmails;
+        _loadingCommits  = Config.EnableCommits;
+        _loadingTodo     = Config.EnableTodo;
 
         try
         {
@@ -136,32 +143,37 @@ else
             // All four fetchers run simultaneously; each pushes a UI update when done
             await Task.WhenAll(
                 RunSection(
+                    Config.EnableMessages,
                     () => ActivityService.FetchMessagesAsync(graph, userId, date, AddWarning),
                     r => _messages      = r,
                     e => _messagesError = e,
                     () => _loadingMessages = false),
 
                 RunSection(
+                    Config.EnableEvents,
                     () => ActivityService.FetchEventsAsync(graph, date, AddWarning),
-                    r => _events      = r,
+                                        r => _events      = r,
                     e => _eventsError = e,
                     () => _loadingEvents = false),
 
                 RunSection(
+                    Config.EnableEmails,
                     () => ActivityService.FetchEmailsAsync(graph, date, AddWarning),
                     r => _emails      = r,
                     e => _emailsError = e,
                     () => _loadingEmails = false),
 
                 RunSection(
+                    Config.EnableCommits,
                     () => ActivityService.FetchCommitsAsync(email, date, AddWarning),
                     r => _commits      = r,
                     e => _commitsError = e,
                     () => _loadingCommits = false),
 
                 RunSection(
+                    Config.EnableTodo,
                     () => ActivityService.FetchTodoTasksAsync(graph, date, AddWarning),
-                    r => _todoTasks  = r,
+                                        r => _todoTasks  = r,
                     e => _todoError  = e,
                     () => _loadingTodo = false)
             );
@@ -186,11 +198,18 @@ else
 
     // Runs one fetcher, updates its state, then pushes the change to the browser
     private async Task RunSection<T>(
+        bool           enabled,
         Func<Task<T>>  fetch,
         Action<T>      setResult,
         Action<string> setError,
         Action         setDone)
     {
+        if (!enabled)
+        {
+            setDone();
+            return;
+        }
+
         try
         {
             setResult(await fetch());

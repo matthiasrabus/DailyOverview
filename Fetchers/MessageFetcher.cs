@@ -192,7 +192,18 @@ public class MessageFetcher
             BodyPreview = preview.Trim(),
             FullBody    = body.Trim(),
             MessageType = msg.MessageType?.ToString() ?? "message",
+            WebLink     = !string.IsNullOrEmpty(msg.WebUrl) ? msg.WebUrl : BuildChatLink(msg),
         };
+    }
+
+    // Chat messages usually have no WebUrl; build a Teams deep link from chat and message id
+    private static string BuildChatLink(ChatMessage msg)
+    {
+        if (string.IsNullOrEmpty(msg.ChatId) || string.IsNullOrEmpty(msg.Id))
+            return string.Empty;
+
+        return $"https://teams.microsoft.com/l/message/{Uri.EscapeDataString(msg.ChatId)}/{Uri.EscapeDataString(msg.Id)}"
+             + "?context=%7B%22contextType%22%3A%22chat%22%7D";
     }
 
     private static string GetChatDisplayName(Chat chat)

@@ -12,6 +12,7 @@ public class CalendarEvent
     public bool IsOrganizer   { get; set; }
     public bool IsOnline      { get; set; }
     public List<string> Attendees { get; set; } = [];
+    public string WebLink     { get; set; } = string.Empty;
 
     public TimeSpan Duration => End - Start;
 }

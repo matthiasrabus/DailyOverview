@@ -15,7 +15,14 @@
                         <span class="text-muted small text-nowrap">
                             @ev.Start.ToString("HH:mm") – @ev.End.ToString("HH:mm")
                         </span>
-                        <span class="@(ev.IsOrganizer ? "fw-semibold text-success" : "")">@ev.Subject</span>
+                        @if (!string.IsNullOrEmpty(ev.WebLink))
+                        {
+                            <a href="@ev.WebLink" target="_blank" rel="noopener" class="text-decoration-none @(ev.IsOrganizer ? "fw-semibold text-success" : "")">@ev.Subject 🔗</a>
+                        }
+                        else
+                        {
+                            <span class="@(ev.IsOrganizer ? "fw-semibold text-success" : "")">@ev.Subject</span>
+                        }
                         <div class="d-flex gap-1 ms-auto flex-shrink-0">
                             @if (ev.IsOnline)
                             {

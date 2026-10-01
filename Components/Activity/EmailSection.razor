@@ -26,7 +26,14 @@
                                 ? $"To: {string.Join(", ", mail.To.Take(2))}{(mail.To.Count > 2 ? $" +{mail.To.Count - 2}" : "")}"
                                 : $"From: {mail.From}")
                         </span>
-                        <span class="text-truncate small">@mail.Subject</span>
+                        @if (!string.IsNullOrEmpty(mail.WebLink))
+                        {
+                            <a href="@mail.WebLink" target="_blank" rel="noopener" class="text-truncate small text-decoration-none">@mail.Subject 🔗</a>
+                        }
+                        else
+                        {
+                            <span class="text-truncate small">@mail.Subject</span>
+                        }
                     </div>
                 </div>
             }
