@@ -30,7 +30,7 @@ public class DevOpsFetcher
         }
     }
 
-    public async Task<List<DevOpsCommit>> GetCommitsForDateAsync(DateOnly date, Action<string>? onWarning = null)
+    public async Task<List<DevOpsCommit>> GetCommitsForDateAsync(DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(_org) || !_http.DefaultRequestHeaders.Contains("Authorization"))
         {
@@ -47,20 +47,20 @@ public class DevOpsFetcher
 
         try
         {
-            var projects = await GetProjectsAsync();
+            var projects = await GetProjectsAsync(ct);
 
             foreach (var project in projects)
             {
-                var repos = await GetRepositoriesAsync(project.Name);
+                var repos = await GetRepositoriesAsync(project.Name, ct);
 
                 foreach (var repo in repos)
                 {
-                    var commits = await GetCommitsAsync(project.Name, repo.Id, repo.Name, startUtc, endUtc);
+                    var commits = await GetCommitsAsync(project.Name, repo.Id, repo.Name, startUtc, endUtc, ct);
                     result.AddRange(commits);
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch DevOps commits: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -72,23 +72,23 @@ public class DevOpsFetcher
 
     // ─── API calls ────────────────────────────────────────────────────────────
 
-    private async Task<List<AdoProject>> GetProjectsAsync()
+    private async Task<List<AdoProject>> GetProjectsAsync(CancellationToken ct)
     {
         var url      = $"https://dev.azure.com/{_org}/_apis/projects?api-version=7.1";
-        var response = await GetAsync<AdoPagedResult<AdoProject>>(url);
+        var response = await GetAsync<AdoPagedResult<AdoProject>>(url, ct);
         return response?.Value ?? [];
     }
 
-    private async Task<List<AdoRepository>> GetRepositoriesAsync(string project)
+    private async Task<List<AdoRepository>> GetRepositoriesAsync(string project, CancellationToken ct)
     {
         var url      = $"https://dev.azure.com/{_org}/{Uri.EscapeDataString(project)}/_apis/git/repositories?api-version=7.1";
-        var response = await GetAsync<AdoPagedResult<AdoRepository>>(url);
+        var response = await GetAsync<AdoPagedResult<AdoRepository>>(url, ct);
         return response?.Value ?? [];
     }
 
     private async Task<List<DevOpsCommit>> GetCommitsAsync(
         string project, string repoId, string repoName,
-        DateTime fromUtc, DateTime toUtc)
+        DateTime fromUtc, DateTime toUtc, CancellationToken ct)
     {
         var from = Uri.EscapeDataString(fromUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"));
         var to   = Uri.EscapeDataString(toUtc.ToString("yyyy-MM-ddTHH:mm:ssZ"));
@@ -101,7 +101,7 @@ public class DevOpsFetcher
                   $"&searchCriteria.author={author}" +
                   $"&$top=1000&api-version=7.1";
 
-        var response = await GetAsync<AdoPagedResult<AdoCommit>>(url);
+        var response = await GetAsync<AdoPagedResult<AdoCommit>>(url, ct);
         if (response?.Value == null) return [];
 
         return response.Value.Select(c => new DevOpsCommit
@@ -115,11 +115,11 @@ public class DevOpsFetcher
         }).ToList();
     }
 
-    private async Task<T?> GetAsync<T>(string url)
+    private async Task<T?> GetAsync<T>(string url, CancellationToken ct)
     {
-        using var response = await _http.GetAsync(url);
+        using var response = await _http.GetAsync(url, ct);
         response.EnsureSuccessStatusCode();
-        var json = await response.Content.ReadAsStringAsync();
+        var json = await response.Content.ReadAsStringAsync(ct);
         return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
 

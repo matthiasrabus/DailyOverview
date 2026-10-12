@@ -9,21 +9,21 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
     private readonly GraphServiceClient _graph    = graph;
     private readonly string             _listName = listName;
 
-    public async Task<List<TodoTask>> GetTasksForDateAsync(DateOnly date, Action<string>? onWarning = null)
+    public async Task<List<TodoTask>> GetTasksForDateAsync(DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
     {
         var result = new List<TodoTask>();
 
         string? listId;
         try
         {
-            listId = await FindListIdAsync(onWarning);
+            listId = await FindListIdAsync(onWarning, ct);
         }
         catch (ODataError odataEx)
         {
             LogODataError("list To Do lists", odataEx, onWarning);
             return result;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not list To Do lists: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -41,10 +41,10 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
 
         try
         {
-            var response = await _graph.Me.Todo.Lists[listId].Tasks.GetAsync();
+            var response = await _graph.Me.Todo.Lists[listId].Tasks.GetAsync(cancellationToken: ct);
 
             var tasks = await GraphPaginator.PaginateAsync<Microsoft.Graph.Models.TodoTask, TodoTaskCollectionResponse>(
-                _graph, response);
+                _graph, response, ct: ct);
 
             result.AddRange(tasks
                 .Select(Map)
@@ -54,7 +54,7 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
         {
             LogODataError("fetch To Do tasks", odataEx, onWarning);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch To Do tasks: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -75,12 +75,12 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
 
     // ─── List lookup ──────────────────────────────────────────────────────────
 
-    private async Task<string?> FindListIdAsync(Action<string>? onWarning)
+    private async Task<string?> FindListIdAsync(Action<string>? onWarning, CancellationToken ct)
     {
-        var response = await _graph.Me.Todo.Lists.GetAsync();
+        var response = await _graph.Me.Todo.Lists.GetAsync(cancellationToken: ct);
 
         var lists = await GraphPaginator.PaginateAsync<TodoTaskList, TodoTaskListCollectionResponse>(
-            _graph, response);
+            _graph, response, ct: ct);
 
         // 1) Exact match on the configured list name
         var match = lists.FirstOrDefault(l =>

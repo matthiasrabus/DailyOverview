@@ -10,7 +10,7 @@ public class MailFetcher(GraphServiceClient graph)
     private static readonly string[] SelectFields =
         ["subject", "from", "toRecipients", "receivedDateTime", "sentDateTime", "bodyPreview", "webLink"];
 
-    public async Task<List<MailMessage>> GetMailForDateAsync(DateOnly date, Action<string>? onWarning = null)
+    public async Task<List<MailMessage>> GetMailForDateAsync(DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
     {
         var startUtc = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
         var endUtc   = startUtc.AddDays(1);
@@ -18,15 +18,15 @@ public class MailFetcher(GraphServiceClient graph)
         var startStr = startUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
         var endStr   = endUtc.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-        var received = await FetchReceivedAsync(startStr, endStr, onWarning);
-        var sent     = await FetchSentAsync(startStr, endStr, onWarning);
+        var received = await FetchReceivedAsync(startStr, endStr, onWarning, ct);
+        var sent     = await FetchSentAsync(startStr, endStr, onWarning, ct);
 
         return [.. received, .. sent];
     }
 
     // ─── Received ─────────────────────────────────────────────────────────────
 
-    private async Task<List<MailMessage>> FetchReceivedAsync(string startStr, string endStr, Action<string>? onWarning)
+    private async Task<List<MailMessage>> FetchReceivedAsync(string startStr, string endStr, Action<string>? onWarning, CancellationToken ct)
     {
         try
         {
@@ -35,12 +35,12 @@ public class MailFetcher(GraphServiceClient graph)
                 config.QueryParameters.Filter = $"receivedDateTime ge {startStr} and receivedDateTime lt {endStr}";
                 config.QueryParameters.Select = SelectFields;
                 config.QueryParameters.Top    = 50;
-            });
+            }, ct);
 
-            var messages = await GraphPaginator.PaginateAsync<Message, MessageCollectionResponse>(_graph, response);
+            var messages = await GraphPaginator.PaginateAsync<Message, MessageCollectionResponse>(_graph, response, ct: ct);
             return messages.Select(m => Map(m, isSent: false)).ToList();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch received mail: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -51,7 +51,7 @@ public class MailFetcher(GraphServiceClient graph)
 
     // ─── Sent ─────────────────────────────────────────────────────────────────
 
-    private async Task<List<MailMessage>> FetchSentAsync(string startStr, string endStr, Action<string>? onWarning)
+    private async Task<List<MailMessage>> FetchSentAsync(string startStr, string endStr, Action<string>? onWarning, CancellationToken ct)
     {
         try
         {
@@ -60,12 +60,12 @@ public class MailFetcher(GraphServiceClient graph)
                 config.QueryParameters.Filter = $"sentDateTime ge {startStr} and sentDateTime lt {endStr}";
                 config.QueryParameters.Select = SelectFields;
                 config.QueryParameters.Top    = 50;
-            });
+            }, ct);
 
-            var messages = await GraphPaginator.PaginateAsync<Message, MessageCollectionResponse>(_graph, response);
+            var messages = await GraphPaginator.PaginateAsync<Message, MessageCollectionResponse>(_graph, response, ct: ct);
             return messages.Select(m => Map(m, isSent: true)).ToList();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch sent mail: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");

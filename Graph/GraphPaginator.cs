@@ -11,7 +11,8 @@ internal static class GraphPaginator
     internal static async Task<List<T>> PaginateAsync<T, TCollection>(
         GraphServiceClient graph,
         TCollection? firstPage,
-        Func<T, bool>? stopCondition = null)
+        Func<T, bool>? stopCondition = null,
+        CancellationToken ct = default)
         where T : class
         where TCollection : class, IParsable, IAdditionalDataHolder, new()
     {
@@ -30,7 +31,7 @@ internal static class GraphPaginator
             }
         );
 
-        await pageIterator.IterateAsync();
+        await pageIterator.IterateAsync(ct);
         return result;
     }
 }

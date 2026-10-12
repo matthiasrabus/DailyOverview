@@ -1,5 +1,6 @@
-@page "/"
+﻿@page "/"
 @rendermode InteractiveServer
+@implements IDisposable
 @inject DailyActivityService ActivityService
 @inject AppConfig Config
 
@@ -23,7 +24,10 @@
             <span>🔍 Fetch Activity</span>
         }
     </button>
-
+    @if (_isFetching)
+    {
+        <button class="btn btn-danger px-4 fw-semibold shadow-sm" @onclick="CancelFetch">Cancel</button>
+    }
 </div>
 
 <!-- ─── Auth error ────────────────────────────────────────────────────────── -->
@@ -107,6 +111,7 @@ else
     private bool    _hasFetched;
     private DateTime? _fetchedDate;
     private bool    _isFetching;
+    private CancellationTokenSource? _cts;
     private string? _authError;
     private readonly List<string> _warnings = [];
 
@@ -117,6 +122,11 @@ else
 
     private async Task FetchData()
     {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        var cts = _cts = new CancellationTokenSource();
+        var ct  = cts.Token;
+
         _isFetching      = true;
         _hasFetched      = true;
         _fetchedDate     = _selectedDate;
@@ -138,45 +148,49 @@ else
         try
         {
             var date = DateOnly.FromDateTime(_selectedDate);
-            var (graph, email, userId) = await ActivityService.AuthenticateAsync();
+            var (graph, email, userId) = await ActivityService.AuthenticateAsync(ct);
 
             // All four fetchers run simultaneously; each pushes a UI update when done
             await Task.WhenAll(
                 RunSection(
                     Config.EnableMessages,
-                    () => ActivityService.FetchMessagesAsync(graph, userId, date, AddWarning),
+                    () => ActivityService.FetchMessagesAsync(graph, userId, date, AddWarning, ct),
                     r => _messages      = r,
                     e => _messagesError = e,
                     () => _loadingMessages = false),
 
                 RunSection(
                     Config.EnableEvents,
-                    () => ActivityService.FetchEventsAsync(graph, date, AddWarning),
+                    () => ActivityService.FetchEventsAsync(graph, date, AddWarning, ct),
                                         r => _events      = r,
                     e => _eventsError = e,
                     () => _loadingEvents = false),
 
                 RunSection(
                     Config.EnableEmails,
-                    () => ActivityService.FetchEmailsAsync(graph, date, AddWarning),
+                    () => ActivityService.FetchEmailsAsync(graph, date, AddWarning, ct),
                     r => _emails      = r,
                     e => _emailsError = e,
                     () => _loadingEmails = false),
 
                 RunSection(
                     Config.EnableCommits,
-                    () => ActivityService.FetchCommitsAsync(email, date, AddWarning),
+                    () => ActivityService.FetchCommitsAsync(email, date, AddWarning, ct),
                     r => _commits      = r,
                     e => _commitsError = e,
                     () => _loadingCommits = false),
 
                 RunSection(
                     Config.EnableTodo,
-                    () => ActivityService.FetchTodoTasksAsync(graph, date, AddWarning),
+                    () => ActivityService.FetchTodoTasksAsync(graph, date, AddWarning, ct),
                                         r => _todoTasks  = r,
                     e => _todoError  = e,
                     () => _loadingTodo = false)
             );
+        }
+        catch (OperationCanceledException)
+        {
+            ResetToStart();
         }
         catch (Exception ex)
         {
@@ -185,9 +199,28 @@ else
         }
         finally
         {
-            _isFetching = false;
+            if (ReferenceEquals(_cts, cts))
+            {
+                _isFetching = false;
+                _cts = null;
+            }
+            cts.Dispose();
         }
     }
+
+    private void CancelFetch() => _cts?.Cancel();
+
+    private void ResetToStart()
+    {
+        _hasFetched  = false;
+        _fetchedDate = null;
+        _messages = null; _events = null; _emails = null; _commits = null; _todoTasks = null;
+        _messagesError = _eventsError = _emailsError = _commitsError = _todoError = null;
+        _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = false;
+        _warnings.Clear();
+    }
+
+    public void Dispose() => _cts?.Cancel();
 
     // Collects fetch warnings so they can be shown in a dedicated UI block
     private void AddWarning(string message)
@@ -213,6 +246,10 @@ else
         try
         {
             setResult(await fetch());
+        }
+        catch (OperationCanceledException)
+        {
+            // cancelled: handled by FetchData
         }
         catch (Exception ex)
         {

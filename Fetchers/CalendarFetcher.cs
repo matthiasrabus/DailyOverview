@@ -7,7 +7,7 @@ public class CalendarFetcher(GraphServiceClient graph)
 {
     private readonly GraphServiceClient _graph = graph;
 
-    public async Task<List<CalendarEvent>> GetEventsForDateAsync(DateOnly date, Action<string>? onWarning = null)
+    public async Task<List<CalendarEvent>> GetEventsForDateAsync(DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
     {
         var result = new List<CalendarEvent>();
 
@@ -23,15 +23,15 @@ public class CalendarFetcher(GraphServiceClient graph)
                 config.QueryParameters.Select        = ["subject", "start", "end", "organizer",
                                                         "isOrganizer", "isOnlineMeeting", "attendees", "sensitivity", "webLink"];
                 config.QueryParameters.Top           = 50;
-            });
+            }, ct);
 
-            var events = await GraphPaginator.PaginateAsync<Event, EventCollectionResponse>(_graph, response);
+            var events = await GraphPaginator.PaginateAsync<Event, EventCollectionResponse>(_graph, response, ct: ct);
 
             result.AddRange(events
                 .Where(ev => ev.Sensitivity != Sensitivity.Private)
                 .Select(Map));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch calendar events: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");

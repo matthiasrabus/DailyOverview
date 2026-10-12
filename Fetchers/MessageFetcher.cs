@@ -18,14 +18,14 @@ public class MessageFetcher
         _myUserId = myUserId;
     }
 
-    public async Task<List<TeamMessage>> GetMessagesForDateAsync(DateOnly date, Action<string>? onWarning = null)
+    public async Task<List<TeamMessage>> GetMessagesForDateAsync(DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
     {
         var startUtc = date.ToDateTime(TimeOnly.MinValue, DateTimeKind.Local).ToUniversalTime();
         var endUtc   = startUtc.AddDays(1);
 
         // Chats and channels are independent — start both at the same time
-        var chatTask    = FetchChatMessagesAsync(startUtc, endUtc, onWarning);
-        var channelTask = FetchChannelMessagesAsync(startUtc, endUtc, onWarning);
+        var chatTask    = FetchChatMessagesAsync(startUtc, endUtc, onWarning, ct);
+        var channelTask = FetchChannelMessagesAsync(startUtc, endUtc, onWarning, ct);
         await Task.WhenAll(chatTask, channelTask);
 
         return [.. chatTask.Result, .. channelTask.Result];
@@ -35,7 +35,7 @@ public class MessageFetcher
     // Graph does not support $filter by date on chat messages, so we page each
     // chat individually. Fetches run in parallel (capped at throttle limit).
 
-    private async Task<List<TeamMessage>> FetchChatMessagesAsync(DateTime start, DateTime end, Action<string>? onWarning)
+    private async Task<List<TeamMessage>> FetchChatMessagesAsync(DateTime start, DateTime end, Action<string>? onWarning, CancellationToken ct)
     {
         try
         {
@@ -43,16 +43,16 @@ public class MessageFetcher
             {
                 config.QueryParameters.Expand = ["members"];
                 config.QueryParameters.Top    = 50;
-            });
+            }, ct);
 
-            var chats = await PaginateAsync<Chat, ChatCollectionResponse>(chatsPage);
+            var chats = await PaginateAsync<Chat, ChatCollectionResponse>(chatsPage, ct: ct);
 
             var tasks   = chats.Select(chat =>
-                Throttled(() => FetchMessagesFromChatAsync(chat.Id!, GetChatDisplayName(chat), start, end, onWarning)));
+                Throttled(() => FetchMessagesFromChatAsync(chat.Id!, GetChatDisplayName(chat), start, end, onWarning, ct), ct));
             var results = await Task.WhenAll(tasks);
             return [.. results.SelectMany(r => r)];
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch chats: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -62,7 +62,7 @@ public class MessageFetcher
     }
 
     private async Task<List<TeamMessage>> FetchMessagesFromChatAsync(
-        string chatId, string chatName, DateTime start, DateTime end, Action<string>? onWarning)
+        string chatId, string chatName, DateTime start, DateTime end, Action<string>? onWarning, CancellationToken ct)
     {
         try
         {
@@ -72,18 +72,19 @@ public class MessageFetcher
             {
                 config.QueryParameters.Top     = 50;
                 config.QueryParameters.Orderby = ["createdDateTime desc"];
-            });
+            }, ct);
 
             var messages = await PaginateAsync<ChatMessage, ChatMessageCollectionResponse>(
                 page,
-                stopCondition: msg => msg.CreatedDateTime < start);
+                stopCondition: msg => msg.CreatedDateTime < start,
+                ct: ct);
 
             return messages
                 .Where(m => m.CreatedDateTime?.UtcDateTime is { } t && t >= start && t < end)
                 .Select(m => MapToTeamMessage(m, chatName))
                 .ToList();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Skipped chat '{chatName}': {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -96,33 +97,33 @@ public class MessageFetcher
     // Channel messages support server-side $filter by date, so fetching them
     // in parallel is safe — each call returns only the matching day's messages.
 
-    private async Task<List<TeamMessage>> FetchChannelMessagesAsync(DateTime start, DateTime end, Action<string>? onWarning)
+    private async Task<List<TeamMessage>> FetchChannelMessagesAsync(DateTime start, DateTime end, Action<string>? onWarning, CancellationToken ct)
     {
         var result = new List<TeamMessage>();
         try
         {
-            var teamsPage = await _graph.Me.JoinedTeams.GetAsync();
-            var teams     = await PaginateAsync<Team, TeamCollectionResponse>(teamsPage);
+            var teamsPage = await _graph.Me.JoinedTeams.GetAsync(cancellationToken: ct);
+            var teams     = await PaginateAsync<Team, TeamCollectionResponse>(teamsPage, ct: ct);
 
             // Fan out channel enumeration across teams, then message fetches across channels
             var channelRefLists = await Task.WhenAll(teams.Select(team =>
                 Throttled(async () =>
                 {
-                    var channelsPage = await _graph.Teams[team.Id].Channels.GetAsync();
-                    var channels = await PaginateAsync<Channel, ChannelCollectionResponse>(channelsPage);
+                    var channelsPage = await _graph.Teams[team.Id].Channels.GetAsync(cancellationToken: ct);
+                    var channels = await PaginateAsync<Channel, ChannelCollectionResponse>(channelsPage, ct: ct);
                     return channels.Select(ch =>
                         (TeamId: team.Id!, ChannelId: ch.Id!, Source: $"{team.DisplayName} › #{ch.DisplayName}"));
-                })));
+                }, ct)));
 
             var channelRefs = channelRefLists.SelectMany(r => r);
 
             var tasks = channelRefs.Select(r =>
-                Throttled(() => FetchMessagesFromChannelAsync(r.TeamId, r.ChannelId, r.Source, start, end, onWarning)));
+                Throttled(() => FetchMessagesFromChannelAsync(r.TeamId, r.ChannelId, r.Source, start, end, onWarning, ct), ct));
 
             var results = await Task.WhenAll(tasks);
             result.AddRange(results.SelectMany(r => r));
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch channel messages: {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -132,7 +133,7 @@ public class MessageFetcher
     }
 
     private async Task<List<TeamMessage>> FetchMessagesFromChannelAsync(
-        string teamId, string channelId, string sourceName, DateTime start, DateTime end, Action<string>? onWarning)
+        string teamId, string channelId, string sourceName, DateTime start, DateTime end, Action<string>? onWarning, CancellationToken ct)
     {
         try
         {
@@ -144,12 +145,12 @@ public class MessageFetcher
                 config.QueryParameters.Filter =
                     $"createdDateTime ge {startStr} and createdDateTime lt {endStr}";
                 config.QueryParameters.Top = 50;
-            });
+            }, ct);
 
-            var messages = await PaginateAsync<ChatMessage, ChatMessageCollectionResponse>(page);
+            var messages = await PaginateAsync<ChatMessage, ChatMessageCollectionResponse>(page, ct: ct);
             return messages.Select(m => MapToTeamMessage(m, sourceName)).ToList();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Skipped channel '{sourceName}': {ex.Message}";
             Console.WriteLine($"   ⚠️  {message}");
@@ -160,9 +161,9 @@ public class MessageFetcher
 
     // ─── Throttle helper ──────────────────────────────────────────────────────
 
-    private async Task<T> Throttled<T>(Func<Task<T>> work)
+    private async Task<T> Throttled<T>(Func<Task<T>> work, CancellationToken ct)
     {
-        await _throttle.WaitAsync();
+        await _throttle.WaitAsync(ct);
         try     { return await work(); }
         finally { _throttle.Release(); }
     }
@@ -241,8 +242,9 @@ public class MessageFetcher
 
     private Task<List<T>> PaginateAsync<T, TCollection>(
         TCollection?   firstPage,
-        Func<T, bool>? stopCondition = null)
+        Func<T, bool>? stopCondition = null,
+        CancellationToken ct = default)
         where T           : class
         where TCollection : class, IParsable, IAdditionalDataHolder, new()
-        => GraphPaginator.PaginateAsync<T, TCollection>(_graph, firstPage, stopCondition);
+        => GraphPaginator.PaginateAsync<T, TCollection>(_graph, firstPage, stopCondition, ct);
 }
