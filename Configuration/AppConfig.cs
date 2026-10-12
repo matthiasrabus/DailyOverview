@@ -19,6 +19,7 @@ public class AppConfig
     public bool EnableEvents   { get; set; } = true;
     public bool EnableEmails   { get; set; } = true;
     public bool EnableCommits  { get; set; } = true;
+    public bool EnableWorkItems { get; set; } = true;
     public bool EnableTodo     { get; set; } = true;
     public bool ShowWarnings   { get; set; } = true;
 
@@ -36,6 +37,7 @@ public class AppConfig
             EnableEvents       = EnableEvents,
             EnableEmails       = EnableEmails,
             EnableCommits      = EnableCommits,
+            EnableWorkItems    = EnableWorkItems,
             EnableTodo         = EnableTodo,
             ShowWarnings       = ShowWarnings,
         };
@@ -94,6 +96,7 @@ public class AppConfig
             EnableEvents       = settings?.EnableEvents   ?? true,
             EnableEmails       = settings?.EnableEmails   ?? true,
             EnableCommits      = settings?.EnableCommits  ?? true,
+            EnableWorkItems    = settings?.EnableWorkItems ?? true,
             EnableTodo         = settings?.EnableTodo     ?? true,
             ShowWarnings       = settings?.ShowWarnings   ?? true,
         };
@@ -110,6 +113,7 @@ public class AppConfig
         public bool?   EnableEvents       { get; set; }
         public bool?   EnableEmails       { get; set; }
         public bool?   EnableCommits      { get; set; }
+        public bool?   EnableWorkItems    { get; set; }
         public bool?   EnableTodo         { get; set; }
         public bool?   ShowWarnings       { get; set; }
     }

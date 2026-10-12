@@ -43,6 +43,9 @@ public class DailyActivityService
     public Task<List<DevOpsCommit>> FetchCommitsAsync(string userEmail, DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
         => new DevOpsFetcher(_config, userEmail).GetCommitsForDateAsync(date, onWarning, ct);
 
+    public Task<List<DevOpsWorkItem>> FetchWorkItemsAsync(string userEmail, DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
+        => new DevOpsFetcher(_config, userEmail).GetWorkItemsForDateAsync(date, onWarning, ct);
+
     public Task<List<TodoTask>> FetchTodoTasksAsync(GraphServiceClient graph, DateOnly date, Action<string>? onWarning = null, CancellationToken ct = default)
         => new TodoFetcher(graph, _config.TodoListName).GetTasksForDateAsync(date, onWarning, ct);
 }

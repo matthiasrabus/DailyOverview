@@ -50,12 +50,14 @@
                   Events="@_events"     LoadingEvents="@_loadingEvents"
                   Emails="@_emails"     LoadingEmails="@_loadingEmails"
                   Commits="@_commits"   LoadingCommits="@_loadingCommits"
+                  WorkItems="@_workItems" LoadingWorkItems="@_loadingWorkItems"
                   Tasks="@_todoTasks"   LoadingTasks="@_loadingTodo" />
 
     @if (Config.EnableMessages) { <MessagesSection Items="@_messages" IsLoading="@_loadingMessages" Error="@_messagesError" /> }
     @if (Config.EnableEvents)   { <EventsSection   Items="@_events"   IsLoading="@_loadingEvents"   Error="@_eventsError" /> }
     @if (Config.EnableEmails)   { <EmailSection    Items="@_emails"   IsLoading="@_loadingEmails"   Error="@_emailsError" /> }
     @if (Config.EnableCommits)  { <CommitsSection  Items="@_commits"  IsLoading="@_loadingCommits"  Error="@_commitsError" /> }
+    @if (Config.EnableWorkItems) { <WorkItemsSection Items="@_workItems" IsLoading="@_loadingWorkItems" Error="@_workItemsError" /> }
     @if (Config.EnableTodo)     { <TodoSection     Items="@_todoTasks" IsLoading="@_loadingTodo"    Error="@_todoError" /> }
 }
 else
@@ -93,6 +95,9 @@ else
     private List<MailMessage>?   _emails;
     private List<DevOpsCommit>?  _commits;
     private List<TodoTask>?      _todoTasks;
+    private List<DevOpsWorkItem>? _workItems;
+    private bool _loadingWorkItems;
+    private string? _workItemsError;
 
     private bool _loadingMessages;
     private bool _loadingEvents;
@@ -138,6 +143,9 @@ else
         _emails   = null;
         _commits  = null;
         _todoTasks = null;
+        _workItems = null;
+        _workItemsError = null;
+        _loadingWorkItems = Config.EnableWorkItems;
         _messagesError = _eventsError = _emailsError = _commitsError = _todoError = null;
         _loadingMessages = Config.EnableMessages;
         _loadingEvents   = Config.EnableEvents;
@@ -181,6 +189,13 @@ else
                     () => _loadingCommits = false),
 
                 RunSection(
+                    Config.EnableWorkItems,
+                    () => ActivityService.FetchWorkItemsAsync(email, date, AddWarning, ct),
+                    r => _workItems      = r,
+                    e => _workItemsError = e,
+                    () => _loadingWorkItems = false),
+
+                RunSection(
                     Config.EnableTodo,
                     () => ActivityService.FetchTodoTasksAsync(graph, date, AddWarning, ct),
                                         r => _todoTasks  = r,
@@ -195,7 +210,7 @@ else
         catch (Exception ex)
         {
             _authError = ex.Message;
-            _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = false;
+            _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = _loadingWorkItems = false;
         }
         finally
         {
@@ -214,7 +229,7 @@ else
     {
         _hasFetched  = false;
         _fetchedDate = null;
-        _messages = null; _events = null; _emails = null; _commits = null; _todoTasks = null;
+        _messages = null; _events = null; _emails = null; _commits = null; _todoTasks = null; _workItems = null; _workItemsError = null; _loadingWorkItems = false;
         _messagesError = _eventsError = _emailsError = _commitsError = _todoError = null;
         _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = false;
         _warnings.Clear();

@@ -52,8 +52,11 @@
             <label class="form-check-label" for="swCommits">Commits</label>
         </div>
         <div class="form-check form-switch mb-2">
-            <input class="form-check-input" type="checkbox" id="swTodo" @bind="Config.EnableTodo" />
-            <label class="form-check-label" for="swTodo">To Do</label>
+            <input class="form-check-input" type="checkbox" id="swWorkItems" @bind="Config.EnableWorkItems" />
+            <label class="form-check-label" for="swWorkItems">Work Items</label>
+        </div>
+        <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" id="swTodo" @bind="Config.EnableTodo" />            <label class="form-check-label" for="swTodo">To Do</label>
         </div>
         <hr />
         <div class="form-check form-switch">

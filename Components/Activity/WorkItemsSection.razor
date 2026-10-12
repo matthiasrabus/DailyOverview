@@ -1,0 +1,59 @@
+<SectionCard Title="Work Items" Icon="📋" Count="@(Items?.Count ?? 0)"
+             IsLoading="@IsLoading" Error="@Error" LoadingLabel="Fetching DevOps work items…">
+    <SummaryContent>
+        @if (Items?.Count > 0)
+        {
+            <text>@Items.Select(w => w.Project).Distinct().Count() projects</text>
+        }
+    </SummaryContent>
+    <ChildContent>
+        <div class="list-group list-group-flush">
+            @foreach (var group in Items!.OrderBy(w => w.ChangedDate).GroupBy(w => w.Project))
+            {
+                <div class="list-group-item bg-light py-2 px-3 fw-semibold text-secondary small">
+                    📦 @group.Key
+                </div>
+                @foreach (var item in group)
+                {
+                    <div class="list-group-item list-group-item-action py-2 px-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="text-muted small text-nowrap">@item.ChangedDate.ToString("HH:mm")</span>
+                            <span class="badge @TypeClass(item.Type) text-nowrap" style="min-width:6.5rem">@TypeIcon(item.Type) @item.Type</span>
+                            <code class="text-muted small">#@item.Id</code>
+                            <a href="@item.Url" target="_blank" class="text-truncate small text-decoration-none">
+                                @item.Title
+                            </a>
+                            <span class="badge text-bg-light border ms-auto">@item.State</span>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </ChildContent>
+</SectionCard>
+
+@code {
+    [Parameter] public List<DevOpsWorkItem>? Items     { get; set; }
+    [Parameter] public bool                  IsLoading { get; set; }
+    [Parameter] public string?               Error     { get; set; }
+
+    private static string TypeClass(string type) => type.ToLowerInvariant() switch
+    {
+        "bug"        => "text-bg-danger",
+        "user story" => "text-bg-primary",
+        "task"       => "text-bg-warning",
+        "feature"    => "text-bg-success",
+        "epic"       => "text-bg-dark",
+        _            => "text-bg-secondary",
+    };
+
+    private static string TypeIcon(string type) => type.ToLowerInvariant() switch
+    {
+        "bug"        => "🐞",
+        "user story" => "📖",
+        "task"       => "🔨",
+        "feature"    => "⭐",
+        "epic"       => "🚀",
+        _            => "📋",
+    };
+}
