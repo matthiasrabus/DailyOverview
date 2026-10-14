@@ -1,4 +1,4 @@
-using Microsoft.Graph;
+﻿using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Kiota.Abstractions.Serialization;
 
@@ -55,7 +55,7 @@ public class MessageFetcher
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch chats: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }
@@ -87,7 +87,7 @@ public class MessageFetcher
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Skipped chat '{chatName}': {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }
@@ -126,7 +126,7 @@ public class MessageFetcher
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch channel messages: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
         }
         return result;
@@ -153,7 +153,7 @@ public class MessageFetcher
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Skipped channel '{sourceName}': {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }

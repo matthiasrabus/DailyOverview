@@ -1,4 +1,4 @@
-using Microsoft.Graph;
+﻿using Microsoft.Graph;
 using Microsoft.Graph.Models;
 
 namespace TeamsMessageFetcher;
@@ -34,7 +34,7 @@ public class CalendarFetcher(GraphServiceClient graph)
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch calendar events: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
         }
 

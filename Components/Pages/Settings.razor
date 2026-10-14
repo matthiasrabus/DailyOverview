@@ -63,6 +63,15 @@
             <input class="form-check-input" type="checkbox" id="swWarnings" @bind="Config.ShowWarnings" />
             <label class="form-check-label" for="swWarnings">Show warnings</label>
         </div>
+        <div class="mt-3">
+            <label class="form-label" for="selLogLevel">Minimum log level (console and log file)</label>
+            <select class="form-select w-auto" id="selLogLevel" @bind="Config.MinLogLevel">
+                @foreach (var level in new[] { LogLevel.Debug, LogLevel.Information, LogLevel.Warning, LogLevel.Error, LogLevel.Critical })
+                {
+                    <option value="@level">@level</option>
+                }
+            </select>
+        </div>
     </div>
 </div>
 
@@ -88,6 +97,7 @@
         }
         catch (Exception ex)
         {
+            FetchLog.Error("Saving settings failed", ex);
             _message = ex.Message;
             _isError = true;
         }

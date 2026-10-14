@@ -1,4 +1,4 @@
-using Microsoft.Graph;
+﻿using Microsoft.Graph;
 using Microsoft.Graph.Models;
 
 namespace TeamsMessageFetcher;
@@ -43,7 +43,7 @@ public class MailFetcher(GraphServiceClient graph)
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch received mail: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }
@@ -68,7 +68,7 @@ public class MailFetcher(GraphServiceClient graph)
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch sent mail: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }

@@ -209,6 +209,7 @@ else
         }
         catch (Exception ex)
         {
+            FetchLog.Error("Authentication failed", ex);
             _authError = ex.Message;
             _loadingMessages = _loadingEvents = _loadingEmails = _loadingCommits = _loadingTodo = _loadingWorkItems = false;
         }
@@ -268,6 +269,7 @@ else
         }
         catch (Exception ex)
         {
+            FetchLog.Error("Fetching a section failed", ex);
             setError(ex.Message);
         }
         finally

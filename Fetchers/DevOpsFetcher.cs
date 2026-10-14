@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -35,7 +35,7 @@ public class DevOpsFetcher
         if (string.IsNullOrEmpty(_org) || !_http.DefaultRequestHeaders.Contains("Authorization"))
         {
             const string message = "DevOps org or PAT not configured — skipping commits.";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }
@@ -63,7 +63,7 @@ public class DevOpsFetcher
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch DevOps commits: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
         }
 
@@ -75,7 +75,7 @@ public class DevOpsFetcher
         if (string.IsNullOrEmpty(_org) || !_http.DefaultRequestHeaders.Contains("Authorization"))
         {
             const string message = "DevOps org or PAT not configured — skipping work items.";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }
@@ -129,7 +129,7 @@ public class DevOpsFetcher
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch DevOps work items: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return [];
         }

@@ -23,6 +23,9 @@ public class AppConfig
     public bool EnableTodo     { get; set; } = true;
     public bool ShowWarnings   { get; set; } = true;
 
+    // Minimum severity written to the console and the log file
+    public LogLevel MinLogLevel { get; set; } = LogLevel.Information;
+
     public void Save()
     {
         var settingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
@@ -40,6 +43,7 @@ public class AppConfig
             EnableWorkItems    = EnableWorkItems,
             EnableTodo         = EnableTodo,
             ShowWarnings       = ShowWarnings,
+            MinLogLevel        = MinLogLevel.ToString(),
         };
         var options = new System.Text.Json.JsonSerializerOptions { WriteIndented = true };
         File.WriteAllText(settingsPath, System.Text.Json.JsonSerializer.Serialize(settings, options));
@@ -99,6 +103,8 @@ public class AppConfig
             EnableWorkItems    = settings?.EnableWorkItems ?? true,
             EnableTodo         = settings?.EnableTodo     ?? true,
             ShowWarnings       = settings?.ShowWarnings   ?? true,
+            MinLogLevel        = Enum.TryParse<LogLevel>(settings?.MinLogLevel, true, out var minLevel)
+                                     ? minLevel : LogLevel.Information,
         };
     }
 
@@ -116,5 +122,6 @@ public class AppConfig
         public bool?   EnableWorkItems    { get; set; }
         public bool?   EnableTodo         { get; set; }
         public bool?   ShowWarnings       { get; set; }
+        public string? MinLogLevel        { get; set; }
     }
 }

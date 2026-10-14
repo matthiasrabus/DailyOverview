@@ -1,4 +1,4 @@
-using Microsoft.Graph;
+﻿using Microsoft.Graph;
 using Microsoft.Graph.Models;
 using Microsoft.Graph.Models.ODataErrors;
 
@@ -26,7 +26,7 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not list To Do lists: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return result;
         }
@@ -34,7 +34,7 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
         if (listId == null)
         {
             var message = $"Could not find To Do list \"{_listName}\".";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
             return result;
         }
@@ -57,7 +57,7 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             var message = $"Could not fetch To Do tasks: {ex.Message}";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
         }
 
@@ -69,7 +69,7 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
         var detail = odataEx.Error?.Message ?? odataEx.Message;
         var code   = odataEx.Error?.Code;
         var message = $"Could not {action}: {detail} (code: {code}, status: {odataEx.ResponseStatusCode})";
-        Console.WriteLine($"   ⚠️  {message}");
+        FetchLog.Warning(message);
         onWarning?.Invoke(message);
     }
 
@@ -97,13 +97,13 @@ public class TodoFetcher(GraphServiceClient graph, string listName)
         if (match == null)
         {
             const string message = "No To Do lists found for this account.";
-            Console.WriteLine($"   ⚠️  {message}");
+            FetchLog.Warning(message);
             onWarning?.Invoke(message);
         }
         else if (!string.Equals(match.DisplayName, _listName, StringComparison.OrdinalIgnoreCase))
         {
-            Console.WriteLine($"   ℹ️  To Do list \"{_listName}\" not found; using \"{match.DisplayName}\" instead. " +
-                               $"Available lists: {string.Join(", ", lists.Select(l => l.DisplayName))}");
+            FetchLog.Info($"To Do list \"{_listName}\" not found; using \"{match.DisplayName}\" instead. " +
+                          $"Available lists: {string.Join(", ", lists.Select(l => l.DisplayName))}");
         }
 
         return match?.Id;
