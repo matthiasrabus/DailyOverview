@@ -14,6 +14,7 @@ builder.Logging.SetMinimumLevel(LogLevel.Trace);
 builder.Logging.AddFilter((_, level) => level >= config.MinLogLevel);
 builder.Logging.AddFilter("Microsoft", LogLevel.Warning);
 builder.Logging.AddFilter("System", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Information);
 builder.Logging.AddProvider(new FileLoggerProvider(Path.Combine(AppContext.BaseDirectory, "logs")));
 
 builder.Services.AddSingleton<DailyActivityService>();
